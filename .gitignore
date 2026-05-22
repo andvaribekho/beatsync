@@ -1,0 +1,7 @@
+.vercel
+node_modules/
+uploads/
+*.log
+*.zip
+.env
+.env.*

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeatSync - Beatmap Generator + Rhythm Game</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: radial-gradient(circle at 30% 0%, #25305d 0, #121423 44%, #090a12 100%);
+  color: #eee;
+  min-height: 100vh;
+  padding: 24px;
+}
+.app-shell {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(360px, 560px) minmax(420px, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.container, .game-panel {
+  width: 100%;
+  padding: 32px;
+  background: rgba(22, 33, 62, 0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.38);
+  backdrop-filter: blur(18px);
+}
+h1, h2 {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #ff6a88, #64e8ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle {
+  text-align: center;
+  color: #9ea7c2;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.upload-zone {
+  border: 2px dashed #e94560;
+  border-radius: 14px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 18px;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: #ff6b6b;
+  background: rgba(233, 69, 96, 0.08);
+}
+.upload-zone.has-file {
+  border-color: #2ecc71;
+  border-style: solid;
+  background: rgba(46, 204, 113, 0.06);
+}
+.upload-zone input { display: none; }
+.upload-icon { font-size: 40px; margin-bottom: 10px; }
+.upload-text { font-size: 14px; color: #d8ddf0; }
+.upload-hint { font-size: 12px; color: #8e96b4; margin-top: 6px; }
+.file-info {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #0f3460;
+  border-radius: 8px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+.file-info.visible { display: flex; }
+.file-info .name { font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-info .size { font-size: 12px; color: #aaa; }
+.file-info .remove {
+  background: none; border: none; color: #e94560; cursor: pointer;
+  font-size: 16px; padding: 0 4px;
+}
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #cfd5e9;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 8px 16px; border-radius: 8px;
+  background: #0f3460; color: #aeb6cf; cursor: pointer;
+  font-size: 13px; transition: all 0.15s;
+  border: 2px solid transparent;
+  user-select: none;
+  text-align: center;
+}
+.chip:hover { background: #1a1a4e; }
+.chip.selected { background: #e94560; color: #fff; border-color: #ff7890; }
+#modes .chip, #events .chip { pointer-events: none; }
+input[type=text], select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #304469;
+  background: #0f3460;
+  color: #eee;
+  font-size: 14px;
+  outline: none;
+}
+input[type=text]:focus, select:focus { border-color: #e94560; }
+button {
+  border: 0;
+  font-family: inherit;
+}
+.generate-btn, .game-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 18px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #e94560, #c23152);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.generate-btn:hover, .game-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(233,69,96,0.4); }
+.generate-btn:disabled, .game-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.game-btn.secondary { background: #0f3460; }
+.download-inline {
+  display: none;
+  width: 100%;
+  padding: 13px;
+  margin-top: 10px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #2ecc71, #23a455);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.download-inline.visible { display: block; }
+.modal-overlay {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #16213e;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+}
+.modal h2 { font-size: 20px; margin-bottom: 16px; }
+.progress-bar { height: 8px; background: #0f3460; border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.progress-fill { height: 100%; background: linear-gradient(135deg, #e94560, #ff6b6b); width: 0%; transition: width 0.5s; }
+.progress-text { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+.status-text { font-size: 15px; color: #2ecc71; }
+.download-btn {
+  display: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  background: #2ecc71;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 16px;
+}
+.download-btn.visible { display: inline-block; }
+.close-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.error-text { color: #ff6b85; font-size: 14px; margin-top: 12px; display: none; }
+.error-text.visible { display: block; }
+
+.game-panel { display: flex; flex-direction: column; min-height: 740px; }
+.game-topbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.game-statbar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+.local-loader {
+  margin: 4px 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  background: rgba(7, 12, 30, 0.44);
+}
+.local-loader-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #dbe4ff;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.local-loader-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.local-file-input {
+  position: relative;
+  display: block;
+  padding: 12px;
+  min-height: 64px;
+  border: 1px dashed rgba(100,232,255,.45);
+  border-radius: 11px;
+  background: rgba(15,52,96,.5);
+  cursor: pointer;
+}
+.local-file-input strong { display: block; font-size: 12px; color: #fff; margin-bottom: 5px; }
+.local-file-input span { display: block; font-size: 12px; color: #9eabc9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.local-file-input input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.local-status { margin-top: 10px; color: #8fa0c6; font-size: 12px; line-height: 1.45; }
+.trainer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15,52,96,.5);
+  border: 1px solid rgba(100,232,255,.25);
+  color: #dbe4ff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+.trainer-toggle input { width: 18px; height: 18px; accent-color: #e94560; }
+.stat {
+  background: rgba(10, 20, 44, 0.86);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.stat span { display: block; color: #8fa0c6; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+.stat strong { font-size: 18px; color: #fff; }
+.game-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #0a0d19, #171a32 55%, #0b0d18);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+#gameCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.game-canvas-wrap.shake { animation: shake .1s linear; }
+.damage-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(255, 0, 48, 0.32);
+  transition: opacity .3s ease-out;
+  z-index: 4;
+}
+.damage-flash.active { opacity: 1; transition: opacity .03s linear; }
+.heart-hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(5, 10, 24, .68);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 12px 34px rgba(0,0,0,.28);
+  font-size: 22px;
+  letter-spacing: 4px;
+  line-height: 1;
+  user-select: none;
+}
+.heart-hud .lost { opacity: .22; filter: grayscale(1); }
+.heart-text { color: #ff4f74; text-shadow: 0 0 12px rgba(255,80,116,.55); }
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.05));
+}
+@keyframes shake {
+  0% { transform: translate(0,0); }
+  20% { transform: translate(-8px,4px); }
+  40% { transform: translate(7px,-3px); }
+  60% { transform: translate(-5px,-3px); }
+  80% { transform: translate(4px,3px); }
+  100% { transform: translate(0,0); }
+}
+.game-message {
+  max-width: 360px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(7, 11, 24, 0.72);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 16px 50px rgba(0,0,0,.4);
+}
+.game-message h3 { font-size: 19px; margin-bottom: 8px; }
+.game-message p { color: #aab5d4; font-size: 13px; line-height: 1.45; }
+.overlay-btn {
+  pointer-events: auto;
+  margin-top: 14px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e94560, #ff7a95);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.game-note { color: #9ea7c2; font-size: 12px; margin-top: 10px; line-height: 1.4; }
+@media (max-width: 1080px) {
+  body { padding: 14px; }
+  .app-shell { grid-template-columns: 1fr; }
+  .game-panel { min-height: 680px; }
+}
+@media (max-width: 620px) {
+  .container, .game-panel { padding: 22px; }
+  .game-topbar, .game-statbar, .local-loader-grid { grid-template-columns: 1fr 1fr; }
+  .game-canvas-wrap { min-height: 460px; }
+}
+</style>
+</head>
+<body>
+
+<main class="app-shell">
+  <section class="container">
+    <h1>BeatSync</h1>
+    <p class="subtitle">Generador Beat Sage + export Song.js</p>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.ogg,.flac,.aiff,.aac,.m4a">
+      <div class="upload-icon">&#x1F3B5;</div>
+      <div class="upload-text">Drop an audio file here or click to browse</div>
+      <div class="upload-hint">MP3, WAV, OGG, FLAC, AIFF, AAC (max ~32MB)</div>
+    </div>
+
+    <div class="file-info" id="fileInfo">
+      <span>🎵</span>
+      <span class="name" id="fileName"></span>
+      <span class="size" id="fileSize"></span>
+      <button class="remove" id="removeFile">&times;</button>
+    </div>
+
+    <div class="form-group">
+      <label>Song Title</label>
+      <input type="text" id="songTitle" placeholder="Enter song title...">
+    </div>
+    <div class="form-group">
+      <label>Artist</label>
+      <input type="text" id="songArtist" placeholder="Enter artist name...">
+    </div>
+
+    <div class="form-group">
+      <label>Difficulties</label>
+      <div class="form-row" id="difficulties">
+        <span class="chip selected" data-value="Normal">Normal</span>
+        <span class="chip selected" data-value="Hard">Hard</span>
+        <span class="chip selected" data-value="Expert">Expert</span>
+        <span class="chip" data-value="ExpertPlus">Expert+</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Game Mode</label>
+      <div class="form-row" id="modes">
+        <span class="chip selected" data-value="OneSaber">One Saber</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Song Events</label>
+      <div class="form-row" id="events">
+        <span class="chip selected" data-value="DotBlocks">Dot Blocks</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Redoble (ms)</label>
+      <input type="text" id="redobleInput" value="180" inputmode="numeric" placeholder="Ej: 180">
+      <p class="game-note">Si dos notas consecutivas están separadas por menos de este valor, se exportan al mismo lane.</p>
+    </div>
+
+    <button class="generate-btn" id="generateBtn">Generate Beatmap</button>
+    <button class="download-inline" id="downloadInlineBtn">Download converted ZIP</button>
+  </section>
+
+  <section class="game-panel">
+    <h2>Rhythm Hop Prototype</h2>
+    <p class="subtitle">Drag mouse/finger to move the glowing ball across 5 lanes</p>
+
+    <div class="game-topbar">
+      <div class="form-group">
+        <label>Difficulty</label>
+        <select id="difficultySelect" disabled>
+          <option>Generate a beatmap first</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Session</label>
+        <button class="game-btn" id="playBtn" disabled>Play generated song</button>
+      </div>
+    </div>
+
+    <label class="trainer-toggle">
+      <input type="checkbox" id="trainerToggle">
+      Trainer mode: keep playing after 0 lives
+    </label>
+
+    <div class="local-loader">
+      <div class="local-loader-title">Load previous song from disk</div>
+      <div class="local-loader-grid">
+        <label class="local-file-input">
+          <strong>Audio file</strong>
+          <span id="localAudioName">Choose .ogg, .mp3 or .wav</span>
+          <input type="file" id="localAudioInput" accept="audio/*,.ogg,.mp3,.wav">
+        </label>
+        <label class="local-file-input">
+          <strong>Beatmap JS</strong>
+          <span id="localJsName">Choose Song.js</span>
+          <input type="file" id="localJsInput" accept=".js,text/javascript,application/javascript">
+        </label>
+      </div>
+      <div class="local-status" id="localLoadStatus">Load both files to play a previously converted song without calling the API.</div>
+    </div>
+
+    <div class="game-statbar">
+      <div class="stat"><span>Lives</span><strong id="livesStat">5</strong></div>
+      <div class="stat"><span>Score</span><strong id="scoreStat">0</strong></div>
+      <div class="stat"><span>Combo</span><strong id="comboStat">0</strong></div>
+      <div class="stat"><span>Notes</span><strong id="notesStat">0</strong></div>
+    </div>
+
+    <div class="game-canvas-wrap" id="gameWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div class="heart-hud" id="heartHud"></div>
+      <div class="damage-flash" id="damageFlash"></div>
+      <div class="game-overlay" id="gameOverlay">
+        <div class="game-message">
+          <h3>Waiting for a generated beatmap</h3>
+          <p>After generation, the ZIP is parsed in-browser. Pick a difficulty and play immediately with the OGG + Song.js beatmap.</p>
+        </div>
+      </div>
+    </div>
+    <p class="game-note">Beatmap parser accepts `SongX_array[i]= [time,lane,flag]`. If `time` is greater than 1000 it is treated as milliseconds, otherwise as seconds.</p>
+  </section>
+</main>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>Generating Beatmap...</h2>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressPct">0%</div>
+    <div class="status-text" id="statusText">Uploading audio...</div>
+    <div class="error-text" id="errorText"></div>
+    <button class="download-btn" id="downloadBtn">Download converted ZIP</button>
+    <button class="close-btn" id="closeBtn">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const state = {
+  file: null,
+  difficulties: ['Normal', 'Hard', 'Expert'],
+  modes: ['OneSaber'],
+  events: ['DotBlocks'],
+  jobId: null,
+  downloadUrl: null,
+  isGenerating: false,
+  generatedZipBlob: null,
+  generatedAudioBlob: null,
+  generatedMaps: {},
+};
+
+const $ = (sel) => document.querySelector(sel);
+const uploadZone = $('#uploadZone');
+const fileInput = $('#fileInput');
+const fileInfo = $('#fileInfo');
+const fileName = $('#fileName');
+const fileSize = $('#fileSize');
+const removeFileBtn = $('#removeFile');
+const generateBtn = $('#generateBtn');
+const modal = $('#modal');
+const progressFill = $('#progressFill');
+const progressPct = $('#progressPct');
+const statusText = $('#statusText');
+const errorText = $('#errorText');
+const downloadBtn = $('#downloadBtn');
+const closeBtn = $('#closeBtn');
+const songTitle = $('#songTitle');
+const songArtist = $('#songArtist');
+const redobleInput = $('#redobleInput');
+const difficultySelect = $('#difficultySelect');
+const playBtn = $('#playBtn');
+const trainerToggle = $('#trainerToggle');
+const downloadInlineBtn = $('#downloadInlineBtn');
+const overlay = $('#gameOverlay');
+const gameWrap = $('#gameWrap');
+const heartHud = $('#heartHud');
+const damageFlash = $('#damageFlash');
+const livesStat = $('#livesStat');
+const scoreStat = $('#scoreStat');
+const comboStat = $('#comboStat');
+const notesStat = $('#notesStat');
+const localAudioInput = $('#localAudioInput');
+const localJsInput = $('#localJsInput');
+const localAudioName = $('#localAudioName');
+const localJsName = $('#localJsName');
+const localLoadStatus = $('#localLoadStatus');
+let localAudioBlob = null;
+let localBeatmapText = null;
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('selected');
+    updateState();
+  });
+});
+
+function updateState() {
+  state.difficulties = [...document.querySelectorAll('#difficulties .chip.selected')].map(c => c.dataset.value);
+  state.modes = [...document.querySelectorAll('#modes .chip.selected')].map(c => c.dataset.value);
+  state.events = [...document.querySelectorAll('#events .chip.selected')].map(c => c.dataset.value);
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => e.target.files.length && handleFile(e.target.files[0]));
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  const maxSize = 32 * 1024 * 1024;
+  if (file.size > maxSize) return alert('File too large. Max 32MB.');
+  state.file = file;
+  uploadZone.classList.add('has-file');
+  fileName.textContent = file.name;
+  fileSize.textContent = formatSize(file.size);
+  fileInfo.classList.add('visible');
+  if (!songTitle.value) songTitle.value = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ').trim();
+}
+
+removeFileBtn.addEventListener('click', () => {
+  state.file = null;
+  fileInput.value = '';
+  uploadZone.classList.remove('has-file');
+  fileInfo.classList.remove('visible');
+});
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function validate() {
+  if (!state.file) return 'Please select an audio file.';
+  if (!songTitle.value.trim()) return 'Please enter a song title.';
+  if (!songArtist.value.trim()) return 'Please enter an artist name.';
+  if (state.difficulties.length === 0) return 'Select at least one difficulty.';
+  if (state.modes.length === 0) return 'Select at least one game mode.';
+  if (Number.isNaN(Number(redobleInput.value)) || Number(redobleInput.value) < 0) return 'Redoble must be a positive number in milliseconds.';
+  return null;
+}
+
+generateBtn.addEventListener('click', startGeneration);
+
+async function startGeneration() {
+  const err = validate();
+  if (err) return alert(err);
+  state.isGenerating = true;
+  state.jobId = null;
+  state.downloadUrl = null;
+  state.generatedZipBlob = null;
+  state.generatedAudioBlob = null;
+  state.generatedMaps = {};
+  generateBtn.disabled = true;
+  playBtn.disabled = true;
+  difficultySelect.disabled = true;
+  downloadInlineBtn.classList.remove('visible');
+
+  modal.classList.add('active');
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+  statusText.textContent = 'Creating beatmap job...';
+  errorText.classList.remove('visible');
+  downloadBtn.classList.remove('visible');
+
+  try {
+    const formData = new FormData();
+    formData.append('audio_file', state.file);
+    formData.append('audio_metadata_title', songTitle.value.trim());
+    formData.append('audio_metadata_artist', songArtist.value.trim());
+    formData.append('difficulties', state.difficulties.join(','));
+    formData.append('modes', state.modes.join(','));
+    formData.append('events', state.events.join(','));
+    formData.append('environment', 'DefaultEnvironment');
+    formData.append('system_tag', 'v2');
+
+    const createRes = await fetch('/api/create', { method: 'POST', body: formData });
+    if (!createRes.ok) throw new Error((await createRes.json().catch(() => ({}))).error || 'Failed to create beatmap');
+
+    const { id } = await createRes.json();
+    state.jobId = id;
+
+    statusText.textContent = 'Generating beatmap...';
+    await pollHeartbeat(id);
+
+    statusText.textContent = 'Downloading converted ZIP...';
+    const redoble = Math.max(0, Number(redobleInput.value || 0));
+    const dlRes = await fetch(`/api/download/${id}?redoble=${encodeURIComponent(redoble)}`);
+    if (!dlRes.ok) throw new Error('Beatmap generation failed on server');
+
+    const blob = await dlRes.blob();
+    state.generatedZipBlob = blob;
+    state.downloadUrl = URL.createObjectURL(blob);
+    await loadGameAssetsFromZip(blob);
+
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+    statusText.textContent = 'Ready! Download started and game is loaded.';
+    downloadBtn.classList.add('visible');
+    downloadInlineBtn.classList.add('visible');
+    triggerDownload(blob);
+    modal.classList.remove('active');
+  } catch (err) {
+    console.error('Generation error:', err);
+    errorText.textContent = err.message || 'Something went wrong';
+    errorText.classList.add('visible');
+    statusText.textContent = 'Failed';
+  } finally {
+    state.isGenerating = false;
+    generateBtn.disabled = false;
+  }
+}
+
+async function pollHeartbeat(jobId) {
+  let progress = 0;
+  let fails = 0;
+  while (progress < 98) {
+    try {
+      const hbRes = await fetch(`/api/heartbeat/${jobId}`);
+      if (!hbRes.ok) throw new Error('Heartbeat failed');
+      const { status } = await hbRes.json();
+      if (status === 'DONE') { progress = 100; break; }
+      const statusMap = { PENDING: 5, LOADING_AUDIO: 20, CREATING_LEVEL: 60, FORMATTING_LEVEL: 85 };
+      progress = Math.max(progress, statusMap[status] || progress + 5);
+    } catch (e) {
+      fails++;
+      if (fails >= 5) throw new Error('Lost connection to server');
+    }
+    progressFill.style.width = `${Math.min(progress, 98)}%`;
+    progressPct.textContent = `${Math.round(Math.min(progress, 98))}%`;
+    await new Promise(r => setTimeout(r, 3000));
+  }
+}
+
+function triggerDownload(blob) {
+  const title = songTitle.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+  const artist = songArtist.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `BeatSync_${artist}_-_${title}_SongJS.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+downloadBtn.addEventListener('click', () => state.downloadUrl && triggerDownload(state.generatedZipBlob));
+downloadInlineBtn.addEventListener('click', () => state.downloadUrl && triggerDownload(state.generatedZipBlob));
+closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+modal.addEventListener('click', e => e.target === modal && !state.isGenerating && modal.classList.remove('active'));
+
+async function loadGameAssetsFromZip(zipBlob) {
+  const zip = await JSZip.loadAsync(zipBlob);
+  const files = Object.values(zip.files);
+  const audioFile = files.find(f => /\.(ogg|mp3|wav)$/i.test(f.name));
+  if (!audioFile) throw new Error('No audio file found in converted ZIP');
+
+  state.generatedAudioBlob = await audioFile.async('blob');
+  state.generatedMaps = {};
+
+  const jsFiles = files.filter(f => /\.js$/i.test(f.name));
+  for (const file of jsFiles) {
+    const text = await file.async('text');
+    const notes = parseSongJs(text);
+    if (notes.length) {
+      const cleanName = file.name.replace(/^Song\d+_/, '').replace(/\.js$/i, '');
+      state.generatedMaps[cleanName] = notes;
+    }
+  }
+
+  const names = Object.keys(state.generatedMaps);
+  if (!names.length) throw new Error('No playable Song.js beatmaps found');
+
+  setPlayableAssets(state.generatedAudioBlob, state.generatedMaps, `${names.length} generated difficulty file(s) ready.`);
+}
+
+function setPlayableAssets(audioBlob, maps, message) {
+  state.generatedAudioBlob = audioBlob;
+  state.generatedMaps = maps;
+  const names = Object.keys(maps);
+  difficultySelect.innerHTML = names.map(name => `<option value="${name}">${name}</option>`).join('');
+  difficultySelect.disabled = names.length === 0;
+  playBtn.disabled = names.length === 0 || !audioBlob;
+  notesStat.textContent = names.length ? maps[names[0]].length : 0;
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `<div class="game-message"><h3>Beatmap loaded</h3><p>${message} Choose a difficulty and press Play.</p></div>`;
+}
+
+function parseSongJs(source) {
+  const notes = [];
+  const regex = /Song\d+_array\s*\[\d+\]\s*=\s*\[\s*([\d.]+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\]/g;
+  let match;
+  while ((match = regex.exec(source))) {
+    const rawTime = Number(match[1]);
+    const time = rawTime > 1000 ? rawTime / 1000 : rawTime;
+    const lane = Math.max(1, Math.min(5, Number(match[2])));
+    const flag = Number(match[3]);
+    if (flag === 0) notes.push({ time, lane, judged: false, mesh: null });
+  }
+  return notes.sort((a, b) => a.time - b.time);
+}
+
+localAudioInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  localAudioBlob = file;
+  localAudioName.textContent = file.name;
+  await tryLoadLocalSong();
+});
+
+localJsInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  localJsName.textContent = file.name;
+  localBeatmapText = await file.text();
+  await tryLoadLocalSong();
+});
+
+async function tryLoadLocalSong() {
+  if (!localAudioBlob || !localBeatmapText) {
+    localLoadStatus.textContent = 'Load both the audio file and its Song.js beatmap.';
+    return;
+  }
+
+  const notes = parseSongJs(localBeatmapText);
+  if (!notes.length) {
+    localLoadStatus.textContent = 'The JS file was loaded, but no valid good notes were found.';
+    playBtn.disabled = true;
+    return;
+  }
+
+  const beatmapName = localJsName.textContent.replace(/\.js$/i, '') || 'Local Song';
+  setPlayableAssets(localAudioBlob, { [beatmapName]: notes }, `${notes.length} notes loaded from local files.`);
+  localLoadStatus.textContent = `Ready: ${localAudioName.textContent} + ${localJsName.textContent} (${notes.length} notes).`;
+}
+
+class RhythmHopGame {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.wrap = canvas.parentElement;
+    this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.Fog(0x060914, 18, 130);
+    this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 400);
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.clock = new THREE.Clock();
+    this.audioContext = null;
+    this.audioBuffer = null;
+    this.source = null;
+    this.audioStartTime = 0;
+    this.isPlaying = false;
+    this.speed = 18;
+    this.tileHitRadius = 1.75;
+    this.ballGroundY = 0.66;
+    this.lanes = { 1: -4.8, 2: -2.4, 3: 0, 4: 2.4, 5: 4.8 };
+    this.notes = [];
+    this.lives = 5;
+    this.score = 0;
+    this.combo = 0;
+    this.ballTargetX = 0;
+    this.ballX = 0;
+    this.dragging = false;
+
+    this.tileGroup = new THREE.Group();
+    this.railGroup = new THREE.Group();
+    this.scene.add(this.tileGroup);
+    this.scene.add(this.railGroup);
+    this.createWorld();
+    this.resetStats();
+    this.bindInput();
+    this.resize();
+    addEventListener('resize', () => this.resize());
+    this.loop();
+  }
+
+  createWorld() {
+    const ambient = new THREE.AmbientLight(0x7690ff, 1.4);
+    this.scene.add(ambient);
+    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    key.position.set(3, 8, 4);
+    this.scene.add(key);
+
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x10172e, roughness: 0.75, metalness: 0.15 });
+    this.floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 520), floorMat);
+    this.floor.rotation.x = -Math.PI / 2;
+    this.floor.position.z = 220;
+    this.floor.position.y = -0.06;
+    this.scene.add(this.floor);
+
+    const railMat = new THREE.MeshBasicMaterial({ color: 0x253b7d, transparent: true, opacity: 0.55 });
+    for (let lane = 1; lane <= 5; lane++) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 520), railMat);
+      rail.position.set(this.lanes[lane], 0.02, 220);
+      this.railGroup.add(rail);
+    }
+
+    const impactMat = new THREE.MeshBasicMaterial({ color: 0x64e8ff, transparent: true, opacity: 0.95 });
+    this.impactLine = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.08, 0.18), impactMat);
+    this.impactLine.position.set(0, 0.08, 0);
+    this.scene.add(this.impactLine);
+
+    const impactGlow = new THREE.PointLight(0x64e8ff, 2.2, 16);
+    impactGlow.position.set(0, 0.5, 0);
+    this.impactLine.add(impactGlow);
+
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0x72f7ff, emissive: 0x2deaff, emissiveIntensity: 1.6, metalness: .35, roughness: .2 });
+    this.ball = new THREE.Mesh(new THREE.SphereGeometry(0.52, 36, 36), ballMat);
+    this.scene.add(this.ball);
+
+    const glow = new THREE.PointLight(0x62efff, 3.8, 12);
+    this.ball.add(glow);
+  }
+
+  bindInput() {
+    const pointerToWorldX = e => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = THREE.MathUtils.clamp((e.clientX - rect.left) / rect.width, 0, 1);
+      return THREE.MathUtils.lerp(5.3, -5.3, x);
+    };
+    const down = e => {
+      this.dragging = true;
+      this.ballTargetX = pointerToWorldX(e);
+      e.preventDefault();
+    };
+    const move = e => {
+      if (!this.dragging) return;
+      this.ballTargetX = pointerToWorldX(e);
+      e.preventDefault();
+    };
+    const up = () => { this.dragging = false; };
+    this.canvas.addEventListener('pointerdown', down);
+    this.canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
+  async load(audioBlob, notes) {
+    this.stop();
+    this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    this.audioBuffer = await this.audioContext.decodeAudioData(await audioBlob.arrayBuffer());
+    this.notes = notes.map(note => ({ ...note, judged: false, mesh: null }));
+    this.resetStats();
+    this.buildTiles();
+    overlay.innerHTML = `<div class="game-message"><h3>Ready</h3><p>${this.notes.length} tiles loaded. Drag left/right and land on each glowing platform.</p></div>`;
+  }
+
+  buildTiles() {
+    this.tileGroup.clear();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xff4f82, emissive: 0x501234, emissiveIntensity: .55, metalness: .15, roughness: .32 });
+    const geo = new THREE.CylinderGeometry(1.75, 1.75, 0.24, 48);
+    for (const note of this.notes) {
+      const tile = new THREE.Mesh(geo, mat.clone());
+      tile.position.set(this.lanes[note.lane], 0, note.time * this.speed);
+      tile.material.color.setHSL(0.92 - note.lane * .045, .85, .58);
+      tile.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+      tile.userData.flash = 0;
+      tile.userData.baseEmissiveIntensity = 0.55;
+      note.mesh = tile;
+      this.tileGroup.add(tile);
+    }
+    notesStat.textContent = this.notes.length;
+  }
+
+  async play() {
+    if (!this.audioBuffer) return;
+    this.stop(false);
+    await this.audioContext.resume();
+    this.resetStats();
+    this.notes.forEach(note => {
+      note.judged = false;
+      if (note.mesh) {
+        note.mesh.visible = true;
+        note.mesh.scale.set(1, 1, 1);
+        note.mesh.userData.flash = 0;
+        note.mesh.material.emissiveIntensity = note.mesh.userData.baseEmissiveIntensity || 0.55;
+      }
+    });
+    this.source = this.audioContext.createBufferSource();
+    this.source.buffer = this.audioBuffer;
+    this.source.connect(this.audioContext.destination);
+    this.audioStartTime = this.audioContext.currentTime + 0.12;
+    this.source.start(this.audioStartTime);
+    this.isPlaying = true;
+    overlay.style.display = 'none';
+  }
+
+  stop(showOverlay = true) {
+    if (this.source) {
+      try { this.source.stop(); } catch (e) {}
+      this.source.disconnect();
+      this.source = null;
+    }
+    this.isPlaying = false;
+    if (showOverlay) overlay.style.display = 'flex';
+  }
+
+  resetStats() {
+    this.lives = 5;
+    this.score = 0;
+    this.combo = 0;
+    this.updateLivesHud();
+    scoreStat.textContent = this.score;
+    comboStat.textContent = this.combo;
+  }
+
+  updateLivesHud() {
+    livesStat.textContent = this.lives;
+    heartHud.innerHTML = Array.from({ length: 5 }, (_, i) => {
+      const cls = i < this.lives ? 'heart-text' : 'lost';
+      return `<span class="${cls}">♥</span>`;
+    }).join('');
+  }
+
+  triggerMissFeedback() {
+    gameWrap.classList.remove('shake');
+    void gameWrap.offsetWidth;
+    gameWrap.classList.add('shake');
+    damageFlash.classList.add('active');
+    setTimeout(() => damageFlash.classList.remove('active'), 300);
+    this.playFailSound();
+  }
+
+  playFailSound() {
+    const ctx = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    this.audioContext = ctx;
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    const oscA = ctx.createOscillator();
+    const oscB = ctx.createOscillator();
+    oscA.type = 'sawtooth';
+    oscB.type = 'square';
+    oscA.frequency.setValueAtTime(220, now);
+    oscA.frequency.exponentialRampToValueAtTime(54, now + 0.18);
+    oscB.frequency.setValueAtTime(91, now);
+    oscB.frequency.exponentialRampToValueAtTime(38, now + 0.12);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    oscA.connect(gain);
+    oscB.connect(gain);
+    gain.connect(ctx.destination);
+    oscA.start(now);
+    oscB.start(now);
+    oscA.stop(now + 0.24);
+    oscB.stop(now + 0.2);
+  }
+
+  getAudioTime() {
+    if (!this.audioContext || !this.isPlaying) return 0;
+    return Math.max(0, this.audioContext.currentTime - this.audioStartTime);
+  }
+
+  updateJudgement(t) {
+    for (const note of this.notes) {
+      if (note.judged) continue;
+      if (t < note.time) break;
+      note.judged = true;
+      const targetX = this.lanes[note.lane];
+      const hit = Math.abs(this.ballX - targetX) <= this.tileHitRadius;
+      if (hit) {
+        this.combo++;
+        this.score += 100 + this.combo * 3;
+        if (note.mesh) {
+          note.mesh.userData.flash = 1;
+          note.mesh.material.emissive.set(0x9fffff);
+          note.mesh.material.emissiveIntensity = 4.2;
+          note.mesh.scale.set(1.12, 1.35, 1.12);
+        }
+      } else {
+        this.combo = 0;
+        this.lives = Math.max(0, this.lives - 1);
+        this.triggerMissFeedback();
+        if (note.mesh) note.mesh.visible = false;
+      }
+      this.updateLivesHud();
+      scoreStat.textContent = this.score;
+      comboStat.textContent = this.combo;
+      if (this.lives <= 0 && !trainerToggle.checked) {
+        this.gameOver();
+        break;
+      }
+    }
+  }
+
+  getJumpY(t) {
+    if (!this.notes.length || !this.isPlaying) return this.ballGroundY + 0.18;
+
+    let prevTime = 0;
+    let nextTime = this.notes[0].time;
+
+    if (t >= this.notes[this.notes.length - 1].time) return this.ballGroundY;
+
+    for (let i = 0; i < this.notes.length - 1; i++) {
+      if (t >= this.notes[i].time && t <= this.notes[i + 1].time) {
+        prevTime = this.notes[i].time;
+        nextTime = this.notes[i + 1].time;
+        break;
+      }
+    }
+
+    const duration = Math.max(0.08, nextTime - prevTime);
+    const phase = THREE.MathUtils.clamp((t - prevTime) / duration, 0, 1);
+    const height = THREE.MathUtils.clamp(duration * 1.3, 0.75, 2.7);
+    return this.ballGroundY + Math.sin(phase * Math.PI) * height;
+  }
+
+  gameOver() {
+    this.stop(true);
+    overlay.innerHTML = `<div class="game-message"><h3>Game Over</h3><p>Score: ${this.score}. Try the same beatmap again.</p><button class="overlay-btn" id="playAgainBtn">Play Again</button></div>`;
+    const btn = document.getElementById('playAgainBtn');
+    if (btn) btn.addEventListener('click', () => playBtn.click());
+  }
+
+  resize() {
+    const rect = this.wrap.getBoundingClientRect();
+    this.renderer.setSize(rect.width, rect.height, false);
+    this.camera.aspect = rect.width / rect.height;
+    this.camera.updateProjectionMatrix();
+  }
+
+  loop() {
+    requestAnimationFrame(() => this.loop());
+    const dt = Math.min(this.clock.getDelta(), 0.033);
+    const t = this.getAudioTime();
+    const z = t * this.speed;
+
+    this.ballX = this.ballTargetX;
+    const y = this.getJumpY(t);
+    this.ball.position.set(this.ballX, y, z);
+    this.ball.rotation.x -= dt * 7;
+    this.ball.rotation.z += (this.ballTargetX - this.ballX) * dt;
+
+    this.impactLine.position.z = z;
+    this.impactLine.position.y = 0.1;
+    this.floor.position.z = z + 220;
+    this.railGroup.position.z = z;
+
+    for (const note of this.notes) {
+      const tile = note.mesh;
+      if (!tile || tile.userData.flash <= 0) continue;
+      tile.userData.flash = Math.max(0, tile.userData.flash - dt * 2.6);
+      const flash = tile.userData.flash;
+      tile.material.emissiveIntensity = 0.55 + flash * 3.65;
+      tile.scale.setScalar(1 + flash * 0.12);
+      tile.scale.y = 1 + flash * 0.35;
+      if (flash === 0) {
+        tile.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+        tile.scale.set(1, 1, 1);
+      }
+    }
+
+    this.camera.position.set(this.ballX * 0.22, 6.2, z - 11.5);
+    this.camera.lookAt(this.ballX * 0.18, 0.3, z + 10);
+
+    if (this.isPlaying) {
+      this.updateJudgement(t);
+      if (this.audioBuffer && t > this.audioBuffer.duration + 0.5) {
+        this.stop(true);
+        overlay.innerHTML = `<div class="game-message"><h3>Track complete</h3><p>Score: ${this.score}. Combo: ${this.combo}.</p></div>`;
+      }
+    }
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+const game = new RhythmHopGame($('#gameCanvas'));
+
+difficultySelect.addEventListener('change', async () => {
+  const notes = state.generatedMaps[difficultySelect.value] || [];
+  notesStat.textContent = notes.length;
+  await game.load(state.generatedAudioBlob, notes);
+});
+
+playBtn.addEventListener('click', async () => {
+  const notes = state.generatedMaps[difficultySelect.value] || [];
+  if (!state.generatedAudioBlob || !notes.length) return alert('This difficulty has no playable notes.');
+  await game.load(state.generatedAudioBlob, notes);
+  await game.play();
+});
+</script>
+</body>
+</html>
