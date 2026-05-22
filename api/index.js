@@ -6,8 +6,21 @@ const fs = require('fs');
 
 const app = express();
 const BEATSAGE = 'https://beatsage.com';
+const DIFFICULTIES = ['ExpertPlus', 'Expert', 'Hard', 'Normal', 'Easy'];
 
 app.use(express.json());
+
+function splitCsv(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function getDifficultyFromName(fileName) {
+  const lower = fileName.toLowerCase();
+  return DIFFICULTIES.find(difficulty => lower.startsWith(difficulty.toLowerCase())) || null;
+}
 
 // POST /api/create - Generate beatmap
 app.post('/api/create', async (req, res) => {
@@ -41,7 +54,7 @@ app.post('/api/create', async (req, res) => {
     ];
 
     for (const name of fieldNames) {
-      const val = Array.isArray(fields[name]) ? fields[name][0] : fields[name];
+      const val = Array.isArray(fields[name]) ? fields[name].join(',') : fields[name];
       if (val) {
         body.append(name, val);
       }
@@ -90,7 +103,18 @@ app.get('/api/heartbeat/:jobId', async (req, res) => {
 // GET /api/download/:jobId - Download beatmap (converted to Song.js format)
 app.get('/api/download/:jobId', async (req, res) => {
   try {
-    const redobleMs = Math.max(0, Number(req.query.redoble || 0));
+    const redobleMs = Number(req.query.redoble || 0);
+    const zigzagMs = Number(req.query.zigzag || 0);
+    const requestedDifficulties = new Set(splitCsv(req.query.difficulties));
+
+    if (Number.isNaN(redobleMs) || redobleMs < 0) {
+      return res.status(400).json({ error: 'Redoble must be a positive number' });
+    }
+
+    if (Number.isNaN(zigzagMs) || zigzagMs <= redobleMs) {
+      return res.status(400).json({ error: 'Zigzag must be greater than redoble' });
+    }
+
     const response = await fetch(
       `${BEATSAGE}/beatsaber_custom_level_download/${req.params.jobId}`
     );
@@ -110,13 +134,15 @@ app.get('/api/download/:jobId', async (req, res) => {
     const originalZip = new AdmZip(zipBuffer);
     const entries = originalZip.getEntries();
 
-    // Find Info.dat to get song name
+    // Find Info.dat to get song metadata used by Beat Saber timing.
     let songName = 'Beatmap';
+    let bpm = 120;
     const infoEntry = entries.find(e => e.entryName.endsWith('Info.dat'));
     if (infoEntry) {
       try {
         const info = JSON.parse(infoEntry.getData().toString('utf8'));
         songName = info._songName || 'Beatmap';
+        bpm = Number(info._beatsPerMinute || info.beatsPerMinute || bpm);
       } catch (e) { /* ignore */ }
     }
 
@@ -144,9 +170,14 @@ app.get('/api/download/:jobId', async (req, res) => {
       try {
         const datContent = entry.getData().toString('utf8');
         const difficultyName = path.basename(name, '.dat');
+        const difficulty = getDifficultyFromName(difficultyName);
+
+        if (requestedDifficulties.size && difficulty && !requestedDifficulties.has(difficulty)) {
+          continue;
+        }
 
         songIndex++;
-        const jsContent = convertDatToSongJs(datContent, songIndex, songName, difficultyName, { redobleMs });
+        const jsContent = convertDatToSongJs(datContent, songIndex, songName, difficultyName, { bpm, redobleMs, zigzagMs });
         const jsName = `Song${songIndex}_${difficultyName}.js`;
 
         newZip.addFile(jsName, Buffer.from(jsContent, 'utf8'));

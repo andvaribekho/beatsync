@@ -136,6 +136,10 @@ button {
 .generate-btn:hover, .game-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(233,69,96,0.4); }
 .generate-btn:disabled, .game-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 .game-btn.secondary { background: #0f3460; }
+.game-start-btn {
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, #2ecc71, #20a95a);
+}
 .download-inline {
   display: none;
   width: 100%;
@@ -194,9 +198,35 @@ button {
 .error-text.visible { display: block; }
 
 .game-panel { display: flex; flex-direction: column; min-height: 740px; }
-.game-topbar {
+.panel-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(7, 12, 30, 0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.tab-btn {
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a1c4;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, #e94560, #c23152);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(233,69,96,.25);
+}
+.panel-view { display: none; }
+.panel-view.active { display: block; }
+.rhythm-view.active { display: flex; flex-direction: column; flex: 1; }
+.game-topbar {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -332,6 +362,139 @@ button {
 }
 .game-message h3 { font-size: 19px; margin-bottom: 8px; }
 .game-message p { color: #aab5d4; font-size: 13px; line-height: 1.45; }
+.visualizer-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.visualizer-toolbar .game-btn { margin-top: 0; }
+.zoom-controls {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  gap: 6px;
+  align-items: center;
+}
+.zoom-controls button {
+  padding: 10px;
+  border-radius: 10px;
+  background: #0f3460;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.zoom-controls span {
+  color: #dbe4ff;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+.note-reduction-control {
+  display: grid;
+  grid-template-columns: minmax(68px, 1fr) minmax(70px, 1fr);
+  gap: 6px;
+  align-items: end;
+}
+.note-reduction-control label {
+  display: grid;
+  gap: 5px;
+  color: #9ea7c2;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.note-reduction-control input {
+  width: 100%;
+  padding: 10px 12px;
+}
+.note-reduction-control button {
+  padding: 11px 10px;
+  border-radius: 10px;
+  background: #0f3460;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.edit-step-control {
+  display: grid;
+  gap: 5px;
+  color: #9ea7c2;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.edit-step-control input {
+  width: 100%;
+  padding: 10px 12px;
+}
+.visualizer-time {
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(10, 20, 44, 0.86);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #dbe4ff;
+  font-weight: 800;
+  text-align: center;
+}
+.visualizer-note-total {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(10, 20, 44, 0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #dbe4ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.visualizer-edit-status {
+  margin-bottom: 10px;
+  color: #aab5d4;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.visualizer-wrap {
+  position: relative;
+  height: 800px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #090c18, #131a34 55%, #080a12);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.visualizer-seek-slider {
+  position: absolute;
+  top: 16px;
+  right: 10px;
+  bottom: 16px;
+  width: 26px;
+  z-index: 8;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  accent-color: #64e8ff;
+  cursor: pointer;
+}
+#visualizerCanvas {
+  width: 100%;
+  height: 800px;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+#visualizerCanvas.dragging { cursor: grabbing; }
+.visualizer-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: #9ea7c2;
+  background: rgba(3, 7, 18, .35);
+  pointer-events: none;
+}
 .overlay-btn {
   pointer-events: auto;
   margin-top: 14px;
@@ -350,7 +513,7 @@ button {
 }
 @media (max-width: 620px) {
   .container, .game-panel { padding: 22px; }
-  .game-topbar, .game-statbar, .local-loader-grid { grid-template-columns: 1fr 1fr; }
+  .game-topbar, .game-statbar, .local-loader-grid, .visualizer-toolbar { grid-template-columns: 1fr 1fr; }
   .game-canvas-wrap { min-height: 460px; }
 }
 </style>
@@ -419,13 +582,24 @@ button {
       <p class="game-note">Si dos notas consecutivas están separadas por menos de este valor, se exportan al mismo lane.</p>
     </div>
 
+    <div class="form-group">
+      <label>Zigzag (ms)</label>
+      <input type="text" id="zigzagInput" value="420" inputmode="numeric" placeholder="Ej: 420">
+      <p class="game-note">Si dos notas están entre redoble y zigzag, se exportan a carriles adyacentes para evitar saltos largos.</p>
+    </div>
+
     <button class="generate-btn" id="generateBtn">Generate Beatmap</button>
-    <button class="download-inline" id="downloadInlineBtn">Download converted ZIP</button>
+    <button class="download-inline" id="downloadInlineBtn">Download ZIP</button>
   </section>
 
   <section class="game-panel">
-    <h2>Rhythm Hop Prototype</h2>
-    <p class="subtitle">Drag mouse/finger to move the glowing ball across 5 lanes</p>
+    <h2>BeatSync Player</h2>
+    <p class="subtitle">Play the rhythm prototype or inspect the full beatmap timeline</p>
+
+    <div class="panel-tabs">
+      <button class="tab-btn active" data-tab="rhythm" id="rhythmTab">Rhythm Hop</button>
+      <button class="tab-btn" data-tab="visualizer" id="visualizerTab">Visualizer</button>
+    </div>
 
     <div class="game-topbar">
       <div class="form-group">
@@ -434,16 +608,7 @@ button {
           <option>Generate a beatmap first</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Session</label>
-        <button class="game-btn" id="playBtn" disabled>Play generated song</button>
-      </div>
     </div>
-
-    <label class="trainer-toggle">
-      <input type="checkbox" id="trainerToggle">
-      Trainer mode: keep playing after 0 lives
-    </label>
 
     <div class="local-loader">
       <div class="local-loader-title">Load previous song from disk</div>
@@ -462,25 +627,66 @@ button {
       <div class="local-status" id="localLoadStatus">Load both files to play a previously converted song without calling the API.</div>
     </div>
 
-    <div class="game-statbar">
-      <div class="stat"><span>Lives</span><strong id="livesStat">5</strong></div>
-      <div class="stat"><span>Score</span><strong id="scoreStat">0</strong></div>
-      <div class="stat"><span>Combo</span><strong id="comboStat">0</strong></div>
-      <div class="stat"><span>Notes</span><strong id="notesStat">0</strong></div>
-    </div>
+    <div class="panel-view rhythm-view active" id="rhythmView">
+      <label class="trainer-toggle">
+        <input type="checkbox" id="trainerToggle">
+        Trainer mode: keep playing after 0 lives
+      </label>
 
-    <div class="game-canvas-wrap" id="gameWrap">
-      <canvas id="gameCanvas"></canvas>
-      <div class="heart-hud" id="heartHud"></div>
-      <div class="damage-flash" id="damageFlash"></div>
-      <div class="game-overlay" id="gameOverlay">
-        <div class="game-message">
-          <h3>Waiting for a generated beatmap</h3>
-          <p>After generation, the ZIP is parsed in-browser. Pick a difficulty and play immediately with the OGG + Song.js beatmap.</p>
+      <div class="game-statbar">
+        <div class="stat"><span>Lives</span><strong id="livesStat">5</strong></div>
+        <div class="stat"><span>Score</span><strong id="scoreStat">0</strong></div>
+        <div class="stat"><span>Combo</span><strong id="comboStat">0</strong></div>
+        <div class="stat"><span>Notes</span><strong id="notesStat">0</strong></div>
+      </div>
+
+      <button class="game-btn game-start-btn" id="gameStartBtn" disabled>Start</button>
+
+      <div class="game-canvas-wrap" id="gameWrap">
+        <canvas id="gameCanvas"></canvas>
+        <div class="heart-hud" id="heartHud"></div>
+        <div class="damage-flash" id="damageFlash"></div>
+        <div class="game-overlay" id="gameOverlay">
+          <div class="game-message">
+            <h3>Waiting for a generated beatmap</h3>
+            <p>After generation, the ZIP is parsed in-browser. Pick a difficulty and play immediately with the OGG + Song.js beatmap.</p>
+          </div>
         </div>
       </div>
+      <p class="game-note">Beatmap parser accepts `SongX_array[i]= [time,lane,flag]`. If `time` is greater than 1000 it is treated as milliseconds, otherwise as seconds.</p>
     </div>
-    <p class="game-note">Beatmap parser accepts `SongX_array[i]= [time,lane,flag]`. If `time` is greater than 1000 it is treated as milliseconds, otherwise as seconds.</p>
+
+    <div class="panel-view visualizer-view" id="visualizerView">
+      <div class="visualizer-toolbar">
+        <button class="game-btn secondary" id="visualizerPlayBtn" disabled>Play visualizer</button>
+        <button class="game-btn secondary" id="acceptChangesBtn" disabled>Accept changes</button>
+        <button class="game-btn secondary" id="undoEditBtn" disabled>Undo</button>
+        <button class="game-btn secondary" id="resetAllBtn" disabled>Reset all</button>
+        <label class="edit-step-control">Step ms
+          <input type="text" id="editStepInput" value="10" inputmode="numeric">
+        </label>
+        <div class="zoom-controls">
+          <button id="zoomOutBtn" type="button">-</button>
+          <span id="zoomLabel">Zoom 38 px/s</span>
+          <button id="zoomInBtn" type="button">+</button>
+        </div>
+        <div class="note-reduction-control">
+          <label>Reduce %
+            <input type="text" id="noteReductionInput" value="10" inputmode="numeric">
+          </label>
+          <button id="applyReductionBtn" type="button" disabled>Apply</button>
+        </div>
+        <div class="visualizer-time" id="visualizerTime">00:00 / 00:00</div>
+      </div>
+      <div class="visualizer-note-total" id="visualizerNoteTotal">Total notes: 0</div>
+      <div class="visualizer-edit-status" id="visualizerEditStatus">Click a note to select it. Shift-click another note to select the full range. Use left/right to change lane and up/down to move time.</div>
+      <div class="visualizer-wrap" id="visualizerWrap">
+        <canvas id="visualizerCanvas"></canvas>
+        <input class="visualizer-seek-slider" id="visualizerSeekSlider" type="range" min="0" max="0" step="0.01" value="0" disabled>
+        <div class="visualizer-empty" id="visualizerEmpty">Load a generated or local song to inspect the full beatmap. Drag vertically to move through time, click to seek, and press Space to play/pause.</div>
+      </div>
+      <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes affect the game and downloaded ZIP only after Accept changes.</p>
+    </div>
   </section>
 </main>
 
@@ -491,7 +697,7 @@ button {
     <div class="progress-text" id="progressPct">0%</div>
     <div class="status-text" id="statusText">Uploading audio...</div>
     <div class="error-text" id="errorText"></div>
-    <button class="download-btn" id="downloadBtn">Download converted ZIP</button>
+    <button class="download-btn" id="downloadBtn">Download ZIP</button>
     <button class="close-btn" id="closeBtn">Cancel</button>
   </div>
 </div>
@@ -510,6 +716,8 @@ const state = {
   generatedZipBlob: null,
   generatedAudioBlob: null,
   generatedMaps: {},
+  generatedMapFiles: {},
+  originalMaps: {},
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -530,8 +738,9 @@ const closeBtn = $('#closeBtn');
 const songTitle = $('#songTitle');
 const songArtist = $('#songArtist');
 const redobleInput = $('#redobleInput');
+const zigzagInput = $('#zigzagInput');
 const difficultySelect = $('#difficultySelect');
-const playBtn = $('#playBtn');
+const gameStartBtn = $('#gameStartBtn');
 const trainerToggle = $('#trainerToggle');
 const downloadInlineBtn = $('#downloadInlineBtn');
 const overlay = $('#gameOverlay');
@@ -547,8 +756,39 @@ const localJsInput = $('#localJsInput');
 const localAudioName = $('#localAudioName');
 const localJsName = $('#localJsName');
 const localLoadStatus = $('#localLoadStatus');
+const tabButtons = document.querySelectorAll('.tab-btn');
+const rhythmView = $('#rhythmView');
+const visualizerView = $('#visualizerView');
+const visualizerCanvas = $('#visualizerCanvas');
+const visualizerPlayBtn = $('#visualizerPlayBtn');
+const acceptChangesBtn = $('#acceptChangesBtn');
+const undoEditBtn = $('#undoEditBtn');
+const resetAllBtn = $('#resetAllBtn');
+const editStepInput = $('#editStepInput');
+const zoomOutBtn = $('#zoomOutBtn');
+const zoomInBtn = $('#zoomInBtn');
+const zoomLabel = $('#zoomLabel');
+const noteReductionInput = $('#noteReductionInput');
+const applyReductionBtn = $('#applyReductionBtn');
+const visualizerSeekSlider = $('#visualizerSeekSlider');
+const visualizerTime = $('#visualizerTime');
+const visualizerNoteTotal = $('#visualizerNoteTotal');
+const visualizerEmpty = $('#visualizerEmpty');
+const visualizerEditStatus = $('#visualizerEditStatus');
 let localAudioBlob = null;
 let localBeatmapText = null;
+let activeTab = 'rhythm';
+
+tabButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    activeTab = button.dataset.tab;
+    tabButtons.forEach(btn => btn.classList.toggle('active', btn === button));
+    rhythmView.classList.toggle('active', activeTab === 'rhythm');
+    visualizerView.classList.toggle('active', activeTab === 'visualizer');
+    if (activeTab === 'rhythm') game.resize();
+    if (activeTab === 'visualizer') visualizer.resize();
+  });
+});
 
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('click', () => {
@@ -598,12 +838,16 @@ function formatSize(bytes) {
 }
 
 function validate() {
+  const redoble = Number(redobleInput.value);
+  const zigzag = Number(zigzagInput.value);
   if (!state.file) return 'Please select an audio file.';
   if (!songTitle.value.trim()) return 'Please enter a song title.';
   if (!songArtist.value.trim()) return 'Please enter an artist name.';
   if (state.difficulties.length === 0) return 'Select at least one difficulty.';
   if (state.modes.length === 0) return 'Select at least one game mode.';
-  if (Number.isNaN(Number(redobleInput.value)) || Number(redobleInput.value) < 0) return 'Redoble must be a positive number in milliseconds.';
+  if (Number.isNaN(redoble) || redoble < 0) return 'Redoble must be a positive number in milliseconds.';
+  if (Number.isNaN(zigzag) || zigzag < 0) return 'Zigzag must be a positive number in milliseconds.';
+  if (zigzag <= redoble) return 'Zigzag must be greater than redoble.';
   return null;
 }
 
@@ -618,8 +862,10 @@ async function startGeneration() {
   state.generatedZipBlob = null;
   state.generatedAudioBlob = null;
   state.generatedMaps = {};
+  state.generatedMapFiles = {};
+  state.originalMaps = {};
   generateBtn.disabled = true;
-  playBtn.disabled = true;
+  gameStartBtn.disabled = true;
   difficultySelect.disabled = true;
   downloadInlineBtn.classList.remove('visible');
 
@@ -650,9 +896,10 @@ async function startGeneration() {
     statusText.textContent = 'Generating beatmap...';
     await pollHeartbeat(id);
 
-    statusText.textContent = 'Downloading converted ZIP...';
+    statusText.textContent = 'Loading converted beatmap...';
     const redoble = Math.max(0, Number(redobleInput.value || 0));
-    const dlRes = await fetch(`/api/download/${id}?redoble=${encodeURIComponent(redoble)}`);
+    const zigzag = Math.max(0, Number(zigzagInput.value || 0));
+    const dlRes = await fetch(`/api/download/${id}?redoble=${encodeURIComponent(redoble)}&zigzag=${encodeURIComponent(zigzag)}&difficulties=${encodeURIComponent(state.difficulties.join(','))}`);
     if (!dlRes.ok) throw new Error('Beatmap generation failed on server');
 
     const blob = await dlRes.blob();
@@ -662,10 +909,9 @@ async function startGeneration() {
 
     progressFill.style.width = '100%';
     progressPct.textContent = '100%';
-    statusText.textContent = 'Ready! Download started and game is loaded.';
+    statusText.textContent = 'Ready! Game is loaded. Use Download ZIP when you want to save it.';
     downloadBtn.classList.add('visible');
     downloadInlineBtn.classList.add('visible');
-    triggerDownload(blob);
     modal.classList.remove('active');
   } catch (err) {
     console.error('Generation error:', err);
@@ -699,19 +945,69 @@ async function pollHeartbeat(jobId) {
   }
 }
 
-function triggerDownload(blob) {
+function getDownloadName() {
   const title = songTitle.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
   const artist = songArtist.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+  return `BeatSync_${artist || 'Artist'}_-_${title || 'Song'}_SongJS.zip`;
+}
+
+function buildSongJs(mapName, fileName, notes) {
+  const indexMatch = fileName.match(/^Song(\d+)_/i);
+  const songIndex = indexMatch ? Number(indexMatch[1]) : 1;
+  const varName = `Song${songIndex}_array`;
+  const lines = [
+    '//------------------------------------------------',
+    `// BeatSync edited - ${mapName}`,
+    '//------------------------------------------------',
+    `var ${varName} = [];`,
+  ];
+
+  notes
+    .slice()
+    .sort((a, b) => a.time - b.time)
+    .forEach((note, i) => {
+      const time = parseFloat(note.time.toFixed(4));
+      const lane = Math.max(1, Math.min(5, Math.round(note.lane)));
+      lines.push(`    ${varName}[${i}]= [${time},${lane},0];`);
+    });
+
+  return lines.join('\n');
+}
+
+async function buildDownloadBlob() {
+  if (!state.generatedZipBlob) throw new Error('No generated ZIP is available yet.');
+  if (visualizer.dirty) throw new Error('Accept visualizer changes before downloading the ZIP.');
+
+  const zip = await JSZip.loadAsync(state.generatedZipBlob);
+  for (const [mapName, fileName] of Object.entries(state.generatedMapFiles)) {
+    const notes = state.generatedMaps[mapName];
+    if (!notes) continue;
+    zip.file(fileName, buildSongJs(mapName, fileName, notes));
+  }
+
+  return zip.generateAsync({ type: 'blob' });
+}
+
+function triggerDownload(blob) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `BeatSync_${artist}_-_${title}_SongJS.zip`;
+  a.download = getDownloadName();
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
 
-downloadBtn.addEventListener('click', () => state.downloadUrl && triggerDownload(state.generatedZipBlob));
-downloadInlineBtn.addEventListener('click', () => state.downloadUrl && triggerDownload(state.generatedZipBlob));
+async function downloadCurrentZip() {
+  try {
+    const blob = await buildDownloadBlob();
+    triggerDownload(blob);
+  } catch (err) {
+    alert(err.message || 'Could not build ZIP');
+  }
+}
+
+downloadBtn.addEventListener('click', downloadCurrentZip);
+downloadInlineBtn.addEventListener('click', downloadCurrentZip);
 closeBtn.addEventListener('click', () => modal.classList.remove('active'));
 modal.addEventListener('click', e => e.target === modal && !state.isGenerating && modal.classList.remove('active'));
 
@@ -723,6 +1019,8 @@ async function loadGameAssetsFromZip(zipBlob) {
 
   state.generatedAudioBlob = await audioFile.async('blob');
   state.generatedMaps = {};
+  state.generatedMapFiles = {};
+  state.originalMaps = {};
 
   const jsFiles = files.filter(f => /\.js$/i.test(f.name));
   for (const file of jsFiles) {
@@ -731,6 +1029,8 @@ async function loadGameAssetsFromZip(zipBlob) {
     if (notes.length) {
       const cleanName = file.name.replace(/^Song\d+_/, '').replace(/\.js$/i, '');
       state.generatedMaps[cleanName] = notes;
+      state.originalMaps[cleanName] = cloneNotes(notes);
+      state.generatedMapFiles[cleanName] = file.name;
     }
   }
 
@@ -744,10 +1044,14 @@ function setPlayableAssets(audioBlob, maps, message) {
   state.generatedAudioBlob = audioBlob;
   state.generatedMaps = maps;
   const names = Object.keys(maps);
+  for (const name of names) {
+    if (!state.originalMaps[name]) state.originalMaps[name] = cloneNotes(maps[name]);
+  }
   difficultySelect.innerHTML = names.map(name => `<option value="${name}">${name}</option>`).join('');
   difficultySelect.disabled = names.length === 0;
-  playBtn.disabled = names.length === 0 || !audioBlob;
+  gameStartBtn.disabled = names.length === 0 || !audioBlob;
   notesStat.textContent = names.length ? maps[names[0]].length : 0;
+  if (names.length) visualizer.load(audioBlob, maps[names[0]], names[0]).catch(err => console.error('Visualizer load error:', err));
   overlay.style.display = 'flex';
   overlay.innerHTML = `<div class="game-message"><h3>Beatmap loaded</h3><p>${message} Choose a difficulty and press Play.</p></div>`;
 }
@@ -764,6 +1068,10 @@ function parseSongJs(source) {
     if (flag === 0) notes.push({ time, lane, judged: false, mesh: null });
   }
   return notes.sort((a, b) => a.time - b.time);
+}
+
+function cloneNotes(notes) {
+  return notes.map(note => ({ time: note.time, lane: note.lane, judged: false, mesh: null }));
 }
 
 localAudioInput.addEventListener('change', async e => {
@@ -791,13 +1099,508 @@ async function tryLoadLocalSong() {
   const notes = parseSongJs(localBeatmapText);
   if (!notes.length) {
     localLoadStatus.textContent = 'The JS file was loaded, but no valid good notes were found.';
-    playBtn.disabled = true;
+    gameStartBtn.disabled = true;
     return;
   }
 
   const beatmapName = localJsName.textContent.replace(/\.js$/i, '') || 'Local Song';
   setPlayableAssets(localAudioBlob, { [beatmapName]: notes }, `${notes.length} notes loaded from local files.`);
   localLoadStatus.textContent = `Ready: ${localAudioName.textContent} + ${localJsName.textContent} (${notes.length} notes).`;
+}
+
+class BeatmapVisualizer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.audioContext = null;
+    this.audioBuffer = null;
+    this.source = null;
+    this.notes = [];
+    this.duration = 0;
+    this.viewTime = 0;
+    this.startOffset = 0;
+    this.startContextTime = 0;
+    this.isPlaying = false;
+    this.pixelsPerSecond = 38;
+    this.lineY = 710;
+    this.dragging = false;
+    this.dragStartY = 0;
+    this.dragStartTime = 0;
+    this.dragDistance = 0;
+    this.wasPlayingOnPointer = false;
+    this.mapName = '';
+    this.selectedIndex = -1;
+    this.selectedIndices = new Set();
+    this.lastSelectedIndex = -1;
+    this.dirty = false;
+    this.undoStack = [];
+    this.syncingSlider = false;
+
+    this.bindInput();
+    this.resize();
+    addEventListener('resize', () => this.resize());
+    this.loop();
+  }
+
+  bindInput() {
+    this.canvas.addEventListener('pointerdown', e => {
+      if (!this.notes.length) return;
+      this.dragging = true;
+      this.dragStartY = e.clientY;
+      this.dragStartTime = this.viewTime;
+      this.dragDistance = 0;
+      this.wasPlayingOnPointer = this.isPlaying;
+      if (this.isPlaying) this.pause();
+      this.canvas.classList.add('dragging');
+      this.canvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    this.canvas.addEventListener('pointermove', e => {
+      if (!this.dragging) return;
+      const dy = e.clientY - this.dragStartY;
+      this.dragDistance = Math.max(this.dragDistance, Math.abs(dy));
+      this.seekTo(this.dragStartTime - dy / this.pixelsPerSecond, false);
+      e.preventDefault();
+    });
+
+    this.canvas.addEventListener('pointerup', e => {
+      if (!this.dragging) return;
+      this.dragging = false;
+      this.canvas.classList.remove('dragging');
+      if (this.dragDistance < 6) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const noteIndex = this.findNoteAtPoint(x, y);
+        if (noteIndex >= 0) {
+          this.selectNote(noteIndex, e.shiftKey);
+        } else {
+          const time = this.viewTime + (this.lineY - y) / this.pixelsPerSecond;
+          this.seekTo(time, this.wasPlayingOnPointer);
+        }
+      } else if (this.wasPlayingOnPointer) {
+        this.play();
+      }
+      e.preventDefault();
+    });
+  }
+
+  async load(audioBlob, notes, name) {
+    this.stopSource();
+    this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    this.audioBuffer = await this.audioContext.decodeAudioData(await audioBlob.arrayBuffer());
+    this.notes = notes.map(note => ({ ...note }));
+    this.mapName = name || 'Beatmap';
+    this.selectedIndex = -1;
+    this.selectedIndices = new Set();
+    this.lastSelectedIndex = -1;
+    this.dirty = false;
+    this.undoStack = [];
+    this.duration = Math.max(this.audioBuffer.duration, this.notes.length ? this.notes[this.notes.length - 1].time : 0);
+    this.viewTime = 0;
+    this.startOffset = 0;
+    visualizerPlayBtn.disabled = false;
+    visualizerPlayBtn.textContent = 'Play visualizer';
+    acceptChangesBtn.disabled = true;
+    undoEditBtn.disabled = true;
+    resetAllBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    visualizerSeekSlider.disabled = false;
+    visualizerSeekSlider.max = this.duration.toFixed(2);
+    visualizerSeekSlider.value = '0';
+    visualizerEmpty.style.display = 'none';
+    visualizerTime.dataset.name = this.mapName;
+    this.updateEditStatus();
+    this.updateZoomLabel();
+    this.updateNoteTotal();
+    this.draw();
+  }
+
+  updateNoteTotal() {
+    visualizerNoteTotal.textContent = `Total notes: ${this.notes.length}`;
+  }
+
+  getLayout() {
+    const width = this.canvas.clientWidth || 1;
+    const laneLeft = 52;
+    const laneRight = width - 22;
+    const laneWidth = Math.max(1, (laneRight - laneLeft) / 5);
+    return { width, laneLeft, laneRight, laneWidth };
+  }
+
+  findNoteAtPoint(x, y) {
+    const { laneLeft, laneWidth } = this.getLayout();
+    let bestIndex = -1;
+    let bestDistance = Infinity;
+
+    for (let i = 0; i < this.notes.length; i++) {
+      const note = this.notes[i];
+      const noteX = laneLeft + (note.lane - 0.5) * laneWidth;
+      const noteY = this.lineY - (note.time - this.viewTime) * this.pixelsPerSecond;
+      const distance = Math.hypot(noteX - x, noteY - y);
+      if (distance < bestDistance && Math.abs(noteX - x) <= laneWidth * 0.34 && Math.abs(noteY - y) <= 10) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  selectNote(index, range = false) {
+    if (range && this.lastSelectedIndex >= 0) {
+      const start = Math.min(this.lastSelectedIndex, index);
+      const end = Math.max(this.lastSelectedIndex, index);
+      this.selectedIndices = new Set();
+      for (let i = start; i <= end; i++) this.selectedIndices.add(i);
+    } else {
+      this.selectedIndices = new Set([index]);
+      this.lastSelectedIndex = index;
+    }
+    this.selectedIndex = index;
+    this.updateEditStatus();
+    this.draw();
+  }
+
+  setZoom(multiplier) {
+    const before = this.getTime();
+    this.pixelsPerSecond = Math.max(8, Math.min(180, this.pixelsPerSecond * multiplier));
+    this.viewTime = before;
+    this.startOffset = before;
+    this.updateZoomLabel();
+    this.draw();
+  }
+
+  updateZoomLabel() {
+    zoomLabel.textContent = `Zoom ${Math.round(this.pixelsPerSecond)} px/s`;
+  }
+
+  getEditStepSeconds() {
+    const ms = Number(editStepInput.value || 10);
+    if (Number.isNaN(ms) || ms <= 0) return 0.01;
+    return ms / 1000;
+  }
+
+  captureUndo() {
+    this.undoStack.push(cloneNotes(this.notes));
+    if (this.undoStack.length > 10) this.undoStack.shift();
+    undoEditBtn.disabled = false;
+  }
+
+  clearSelection() {
+    this.selectedIndex = -1;
+    this.selectedIndices = new Set();
+    this.lastSelectedIndex = -1;
+  }
+
+  restoreNotes(notes, markDirty = true) {
+    this.notes = cloneNotes(notes);
+    this.clearSelection();
+    this.dirty = markDirty;
+    acceptChangesBtn.disabled = !this.dirty;
+    undoEditBtn.disabled = this.undoStack.length === 0;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus();
+    this.draw();
+  }
+
+  moveSelectedNote(laneDelta, timeDelta) {
+    const indices = [...this.selectedIndices].filter(index => this.notes[index]);
+    if (!indices.length) return;
+    this.captureUndo();
+    for (const index of indices) {
+      const note = this.notes[index];
+      note.lane = Math.max(1, Math.min(5, note.lane + laneDelta));
+      note.time = Math.max(0, Math.min(this.duration, note.time + timeDelta));
+    }
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    this.viewTime = this.notes[this.selectedIndex]?.time || this.viewTime;
+    this.updateEditStatus();
+    this.draw();
+  }
+
+  undo() {
+    const previous = this.undoStack.pop();
+    if (!previous) return;
+    this.restoreNotes(previous, true);
+  }
+
+  resetAll() {
+    const original = state.originalMaps[this.mapName];
+    if (!original) return;
+    this.undoStack = [];
+    this.restoreNotes(original, false);
+    state.generatedMaps[this.mapName] = cloneNotes(original);
+    notesStat.textContent = original.length;
+    if (difficultySelect.value === this.mapName && state.generatedAudioBlob) {
+      game.load(state.generatedAudioBlob, state.generatedMaps[this.mapName]).catch(err => console.error('Game load error:', err));
+    }
+    this.updateEditStatus('All changes reset to the originally generated beatmap.');
+  }
+
+  acceptChanges() {
+    if (!this.mapName || !state.generatedMaps[this.mapName]) return;
+    const accepted = this.notes
+      .map(note => ({ time: note.time, lane: note.lane, judged: false, mesh: null }))
+      .sort((a, b) => a.time - b.time);
+    state.generatedMaps[this.mapName] = accepted;
+    this.notes = accepted.map(note => ({ ...note }));
+    this.selectedIndex = -1;
+    this.selectedIndices = new Set();
+    this.lastSelectedIndex = -1;
+    this.dirty = false;
+    this.undoStack = [];
+    acceptChangesBtn.disabled = true;
+    undoEditBtn.disabled = true;
+    applyReductionBtn.disabled = accepted.length <= 2;
+    notesStat.textContent = accepted.length;
+    this.updateNoteTotal();
+    if (difficultySelect.value === this.mapName && state.generatedAudioBlob) {
+      game.load(state.generatedAudioBlob, accepted).catch(err => console.error('Game load error:', err));
+    }
+    this.updateEditStatus('Changes accepted. The game and Download ZIP now use this edited beatmap.');
+    this.draw();
+  }
+
+  updateEditStatus(message) {
+    if (message) {
+      visualizerEditStatus.textContent = message;
+      return;
+    }
+    if (!this.notes.length) {
+      visualizerEditStatus.textContent = 'Click a note to select it. Shift-click another note to select a range. Use left/right to change lane and up/down to move time.';
+      return;
+    }
+    if (this.selectedIndices.size > 1) {
+      const dirtyText = this.dirty ? ' Unsaved changes.' : '';
+      visualizerEditStatus.textContent = `${this.selectedIndices.size} notes selected.${dirtyText}`;
+      return;
+    }
+    if (this.selectedIndex >= 0 && this.notes[this.selectedIndex]) {
+      const note = this.notes[this.selectedIndex];
+      const dirtyText = this.dirty ? ' Unsaved changes.' : '';
+      visualizerEditStatus.textContent = `Selected note: lane ${note.lane}, time ${note.time.toFixed(3)}s.${dirtyText}`;
+      return;
+    }
+    visualizerEditStatus.textContent = this.dirty
+      ? 'Unsaved edits. Press Accept changes to use them in the game and ZIP.'
+      : 'Click a note to select it. Shift-click another note to select a range. Use left/right to change lane and up/down to move time.';
+  }
+
+  resize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    this.canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    this.canvas.height = Math.round(800 * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.draw();
+  }
+
+  getTime() {
+    if (!this.isPlaying || !this.audioContext) return this.viewTime;
+    return Math.min(this.duration, this.startOffset + this.audioContext.currentTime - this.startContextTime);
+  }
+
+  seekTo(time, autoplay = false) {
+    this.viewTime = Math.max(0, Math.min(this.duration, time));
+    this.startOffset = this.viewTime;
+    this.updateSlider();
+    this.draw();
+    if (autoplay) this.play();
+  }
+
+  updateSlider() {
+    if (this.syncingSlider || visualizerSeekSlider.disabled) return;
+    this.syncingSlider = true;
+    visualizerSeekSlider.value = this.getTime().toFixed(2);
+    this.syncingSlider = false;
+  }
+
+  applyReduction() {
+    if (this.notes.length <= 2) return;
+    const percent = Number(noteReductionInput.value || 0);
+    if (Number.isNaN(percent) || percent <= 0) return alert('Reduction must be greater than 0%.');
+
+    const removeCount = Math.min(this.notes.length - 2, Math.round(this.notes.length * Math.min(percent, 100) / 100));
+    if (removeCount <= 0) return alert('Reduction is too small for this beatmap.');
+
+    this.captureUndo();
+    const removeIndices = this.getHomogeneousRemovalIndices(removeCount);
+    this.notes = this.notes.filter((_, index) => !removeIndices.has(index));
+    this.clearSelection();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Reduced ${removeIndices.size} notes (${percent}%). First and last notes were preserved.`);
+    this.draw();
+  }
+
+  getHomogeneousRemovalIndices(removeCount) {
+    const firstInterior = 1;
+    const lastInterior = this.notes.length - 2;
+    const result = new Set();
+    const firstTime = this.notes[0].time;
+    const lastTime = this.notes[this.notes.length - 1].time;
+
+    if (removeCount === 1) {
+      const target = (firstTime + lastTime) / 2;
+      result.add(this.findClosestInteriorNote(target, result));
+      return result;
+    }
+
+    for (let i = 0; i < removeCount; i++) {
+      const target = firstTime + (i + 1) * (lastTime - firstTime) / (removeCount + 1);
+      result.add(this.findClosestInteriorNote(target, result));
+    }
+
+    return result;
+  }
+
+  findClosestInteriorNote(targetTime, excluded) {
+    let bestIndex = 1;
+    let bestDistance = Infinity;
+    for (let i = 1; i < this.notes.length - 1; i++) {
+      if (excluded.has(i)) continue;
+      const distance = Math.abs(this.notes[i].time - targetTime);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return bestIndex;
+  }
+
+  async togglePlay() {
+    if (!this.audioBuffer) return;
+    if (this.isPlaying) this.pause();
+    else await this.play();
+  }
+
+  async play() {
+    if (!this.audioBuffer) return;
+    if (typeof game !== 'undefined') game.stop(false);
+    this.stopSource();
+    await this.audioContext.resume();
+    this.source = this.audioContext.createBufferSource();
+    this.source.buffer = this.audioBuffer;
+    this.source.connect(this.audioContext.destination);
+    this.startOffset = Math.min(this.viewTime, Math.max(0, this.duration - 0.01));
+    this.startContextTime = this.audioContext.currentTime;
+    this.source.start(0, this.startOffset);
+    this.isPlaying = true;
+    visualizerPlayBtn.textContent = 'Pause visualizer';
+    const source = this.source;
+    this.source.onended = () => {
+      if (this.source !== source) return;
+      if (this.getTime() >= this.duration - 0.05) {
+        this.viewTime = this.duration;
+        this.pause(false);
+      }
+    };
+  }
+
+  pause(updateTime = true) {
+    if (updateTime) this.viewTime = this.getTime();
+    this.stopSource();
+    this.isPlaying = false;
+    visualizerPlayBtn.textContent = 'Play visualizer';
+    this.draw();
+  }
+
+  stopSource() {
+    if (!this.source) return;
+    try { this.source.stop(); } catch (e) {}
+    this.source.disconnect();
+    this.source = null;
+  }
+
+  formatTime(seconds) {
+    const safe = Math.max(0, Math.floor(seconds || 0));
+    const min = Math.floor(safe / 60).toString().padStart(2, '0');
+    const sec = (safe % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+  }
+
+  draw() {
+    const { width, laneLeft, laneRight, laneWidth } = this.getLayout();
+    const height = 800;
+    const ctx = this.ctx;
+    const currentTime = this.getTime();
+    if (this.isPlaying) this.viewTime = currentTime;
+    this.updateSlider();
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#080b16';
+    ctx.fillRect(0, 0, width, height);
+
+    const topTime = this.viewTime + this.lineY / this.pixelsPerSecond;
+    const bottomTime = this.viewTime + (this.lineY - height) / this.pixelsPerSecond;
+
+    for (let lane = 0; lane < 5; lane++) {
+      const x = laneLeft + lane * laneWidth;
+      ctx.fillStyle = lane % 2 === 0 ? 'rgba(16, 31, 68, .72)' : 'rgba(18, 42, 84, .72)';
+      ctx.fillRect(x, 0, laneWidth - 1, height);
+      ctx.fillStyle = 'rgba(100, 232, 255, .12)';
+      ctx.fillRect(x, 0, 1, height);
+    }
+
+    const firstGrid = Math.max(0, Math.floor(bottomTime / 5) * 5);
+    for (let t = firstGrid; t <= topTime; t += 5) {
+      const y = this.lineY - (t - this.viewTime) * this.pixelsPerSecond;
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.beginPath();
+      ctx.moveTo(laneLeft, y);
+      ctx.lineTo(laneRight, y);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(210,220,255,.55)';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.fillText(this.formatTime(t), 8, y + 4);
+    }
+
+    for (let i = 0; i < this.notes.length; i++) {
+      const note = this.notes[i];
+      if (note.time < bottomTime - 1 || note.time > topTime + 1) continue;
+      const y = this.lineY - (note.time - this.viewTime) * this.pixelsPerSecond;
+      const x = laneLeft + (note.lane - 0.5) * laneWidth;
+      const nearLine = Math.abs(note.time - this.viewTime) < 0.08;
+      const selected = this.selectedIndices.has(i);
+      ctx.beginPath();
+      ctx.fillStyle = selected ? '#ffd84d' : (nearLine ? '#ffffff' : `hsl(${330 - note.lane * 13}, 88%, 64%)`);
+      ctx.shadowColor = selected ? '#ffd84d' : (nearLine ? '#ffffff' : '#ff4f82');
+      ctx.shadowBlur = selected ? 18 : (nearLine ? 18 : 8);
+      ctx.roundRect(x - laneWidth * 0.28, y - 4, laneWidth * 0.56, 8, 4);
+      ctx.fill();
+      if (selected) {
+        ctx.strokeStyle = '#fff5b0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(laneLeft, this.lineY);
+    ctx.lineTo(laneRight, this.lineY);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText('NOW', laneRight - 34, this.lineY - 9);
+    visualizerTime.textContent = `${this.formatTime(currentTime)} / ${this.formatTime(this.duration)}`;
+  }
+
+  loop() {
+    requestAnimationFrame(() => this.loop());
+    if (this.isPlaying || activeTab === 'visualizer') this.draw();
+  }
 }
 
 class RhythmHopGame {
@@ -906,7 +1709,9 @@ class RhythmHopGame {
     this.notes = notes.map(note => ({ ...note, judged: false, mesh: null }));
     this.resetStats();
     this.buildTiles();
-    overlay.innerHTML = `<div class="game-message"><h3>Ready</h3><p>${this.notes.length} tiles loaded. Drag left/right and land on each glowing platform.</p></div>`;
+    overlay.innerHTML = `<div class="game-message"><h3>Ready</h3><p>${this.notes.length} tiles loaded. Drag left/right and land on each glowing platform.</p><button class="overlay-btn" id="overlayStartBtn">Start</button></div>`;
+    const btn = document.getElementById('overlayStartBtn');
+    if (btn) btn.addEventListener('click', () => gameStartBtn.click());
   }
 
   buildTiles() {
@@ -1073,7 +1878,7 @@ class RhythmHopGame {
     this.stop(true);
     overlay.innerHTML = `<div class="game-message"><h3>Game Over</h3><p>Score: ${this.score}. Try the same beatmap again.</p><button class="overlay-btn" id="playAgainBtn">Play Again</button></div>`;
     const btn = document.getElementById('playAgainBtn');
-    if (btn) btn.addEventListener('click', () => playBtn.click());
+    if (btn) btn.addEventListener('click', () => gameStartBtn.click());
   }
 
   resize() {
@@ -1128,20 +1933,70 @@ class RhythmHopGame {
   }
 }
 
+const visualizer = new BeatmapVisualizer(visualizerCanvas);
 const game = new RhythmHopGame($('#gameCanvas'));
+
+visualizerPlayBtn.addEventListener('click', () => visualizer.togglePlay());
+acceptChangesBtn.addEventListener('click', () => visualizer.acceptChanges());
+undoEditBtn.addEventListener('click', () => visualizer.undo());
+resetAllBtn.addEventListener('click', () => visualizer.resetAll());
+zoomOutBtn.addEventListener('click', () => visualizer.setZoom(0.75));
+zoomInBtn.addEventListener('click', () => visualizer.setZoom(1.333));
+applyReductionBtn.addEventListener('click', () => visualizer.applyReduction());
+visualizerSeekSlider.addEventListener('input', () => {
+  if (visualizer.syncingSlider) return;
+  visualizer.seekTo(Number(visualizerSeekSlider.value || 0), visualizer.isPlaying);
+});
+
+document.addEventListener('keydown', e => {
+  const tag = e.target?.tagName?.toLowerCase();
+  if (activeTab !== 'visualizer' || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+  if (e.code === 'ArrowLeft') {
+    e.preventDefault();
+    visualizer.moveSelectedNote(-1, 0);
+    return;
+  }
+
+  if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    visualizer.moveSelectedNote(1, 0);
+    return;
+  }
+
+  if (e.code === 'ArrowUp') {
+    e.preventDefault();
+    visualizer.moveSelectedNote(0, visualizer.getEditStepSeconds());
+    return;
+  }
+
+  if (e.code === 'ArrowDown') {
+    e.preventDefault();
+    visualizer.moveSelectedNote(0, -visualizer.getEditStepSeconds());
+    return;
+  }
+
+  if (e.code !== 'Space') return;
+  e.preventDefault();
+  visualizer.togglePlay();
+});
 
 difficultySelect.addEventListener('change', async () => {
   const notes = state.generatedMaps[difficultySelect.value] || [];
   notesStat.textContent = notes.length;
+  await visualizer.load(state.generatedAudioBlob, notes, difficultySelect.value);
   await game.load(state.generatedAudioBlob, notes);
 });
 
-playBtn.addEventListener('click', async () => {
+async function playCurrentGame() {
   const notes = state.generatedMaps[difficultySelect.value] || [];
   if (!state.generatedAudioBlob || !notes.length) return alert('This difficulty has no playable notes.');
+  visualizer.pause();
   await game.load(state.generatedAudioBlob, notes);
   await game.play();
-});
+}
+
+gameStartBtn.addEventListener('click', playCurrentGame);
 </script>
 </body>
 </html>
