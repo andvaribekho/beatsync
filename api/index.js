@@ -6,6 +6,7 @@ const fs = require('fs');
 
 const app = express();
 const BEATSAGE = 'https://beatsage.com';
+const LIBROSA_SPACE = process.env.LIBROSA_SPACE || 'https://andvari3d-beatmaker.hf.space';
 const DIFFICULTIES = ['ExpertPlus', 'Expert', 'Hard', 'Normal', 'Easy'];
 
 app.use(express.json());
@@ -21,6 +22,106 @@ function getDifficultyFromName(fileName) {
   const lower = fileName.toLowerCase();
   return DIFFICULTIES.find(difficulty => lower.startsWith(difficulty.toLowerCase())) || null;
 }
+
+function getFirstFile(file) {
+  if (!file) return null;
+  return Array.isArray(file) ? file[0] : file;
+}
+
+function getFirstField(fields, name, fallback = '') {
+  const value = fields[name];
+  if (Array.isArray(value)) return value[0] || fallback;
+  return value || fallback;
+}
+
+function normalizeLibrosaDownloadUrl(rawUrl) {
+  const url = new URL(rawUrl, LIBROSA_SPACE);
+  return `/api/librosa/file?path=${encodeURIComponent(url.pathname)}`;
+}
+
+// POST /api/librosa/process - Generate beatmaps using the Hugging Face librosa service
+app.post('/api/librosa/process', async (req, res) => {
+  const form = new formidable.IncomingForm({
+    maxFileSize: 80 * 1024 * 1024,
+    keepExtensions: true,
+  });
+
+  let files;
+
+  try {
+    const parsed = await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, parsedFiles) => {
+        if (err) reject(err);
+        else resolve([fields, parsedFiles]);
+      });
+    });
+
+    const [fields, parsedFiles] = parsed;
+    files = parsedFiles;
+    const audio = getFirstFile(files.audio);
+    if (!audio) {
+      return res.status(400).json({ error: 'Missing audio file' });
+    }
+
+    const body = new FormData();
+    const filePath = audio.filepath || audio.path || '';
+    const fileName = audio.originalFilename || audio.name || 'audio.mp3';
+    body.append('audio', fs.createReadStream(filePath), fileName);
+    body.append('timing_offset_ms', getFirstField(fields, 'timing_offset_ms', '0'));
+    body.append('lyrics_shift_ms', getFirstField(fields, 'lyrics_shift_ms', '0'));
+    body.append('whisper_model', getFirstField(fields, 'whisper_model', 'small.en'));
+    body.append('whisper_language', getFirstField(fields, 'whisper_language', 'en'));
+    body.append('with_lyrics', getFirstField(fields, 'with_lyrics', 'false'));
+
+    const response = await fetch(`${LIBROSA_SPACE}/api/process`, {
+      method: 'POST',
+      body,
+      headers: body.getHeaders(),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: payload.error || 'Librosa generation failed' });
+    }
+
+    payload.downloads = (payload.downloads || []).map(item => ({
+      ...item,
+      url: normalizeLibrosaDownloadUrl(item.url),
+    }));
+    res.json(payload);
+  } catch (err) {
+    console.error('Librosa process error:', err);
+    res.status(500).json({ error: 'Librosa generation failed' });
+  } finally {
+    const audio = getFirstFile(files?.audio);
+    const filePath = audio?.filepath || audio?.path;
+    if (filePath) fs.unlink(filePath, () => {});
+  }
+});
+
+// GET /api/librosa/file?path=/api/download/... - Proxy generated files from HF Space
+app.get('/api/librosa/file', async (req, res) => {
+  try {
+    const filePath = String(req.query.path || '');
+    if (!filePath.startsWith('/api/download/')) {
+      return res.status(400).json({ error: 'Invalid librosa file path' });
+    }
+
+    const response = await fetch(`${LIBROSA_SPACE}${filePath}`);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Librosa file not available' });
+    }
+
+    const buffer = await response.buffer();
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+    const disposition = response.headers.get('content-disposition');
+    if (disposition) res.setHeader('Content-Disposition', disposition);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Librosa file proxy error:', err);
+    res.status(500).json({ error: 'Librosa file proxy failed' });
+  }
+});
 
 // POST /api/create - Generate beatmap
 app.post('/api/create', async (req, res) => {

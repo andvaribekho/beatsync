@@ -208,6 +208,31 @@ button {
   background: rgba(7, 12, 30, 0.5);
   border: 1px solid rgba(255,255,255,0.08);
 }
+.generator-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(7, 12, 30, 0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.generator-tab-btn {
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a1c4;
+  font-weight: 800;
+  cursor: pointer;
+}
+.generator-tab-btn.active {
+  background: linear-gradient(135deg, #e94560, #c23152);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(233,69,96,.25);
+}
+.generator-view { display: none; }
+.generator-view.active { display: block; }
 .tab-btn {
   padding: 11px 12px;
   border-radius: 10px;
@@ -285,6 +310,31 @@ button {
   user-select: none;
 }
 .trainer-toggle input { width: 18px; height: 18px; accent-color: #e94560; }
+.lyrics-shift-control {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 10px;
+  align-items: center;
+}
+.lyrics-shift-control label {
+  display: grid;
+  gap: 6px;
+  color: #dbe4ff;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.lyrics-shift-control input[type=range] { width: 100%; accent-color: #64e8ff; }
+.lyrics-shift-control input[type=text] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #304469;
+  background: #0f3460;
+  color: #eee;
+}
 .stat {
   background: rgba(10, 20, 44, 0.86);
   border: 1px solid rgba(255,255,255,0.08);
@@ -344,6 +394,30 @@ button {
   color: #fff;
   background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.05));
 }
+.lyrics-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: none;
+  max-width: 86%;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(5, 10, 24, .62);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #76f3a5;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(80,255,150,.35);
+  pointer-events: none;
+}
+.lyrics-hud .active-word {
+  color: #ffe96a;
+  text-shadow: 0 0 14px rgba(255,233,106,.7);
+}
 @keyframes shake {
   0% { transform: translate(0,0); }
   20% { transform: translate(-8px,4px); }
@@ -372,17 +446,22 @@ button {
 .visualizer-toolbar .game-btn { margin-top: 0; }
 .zoom-controls {
   display: grid;
-  grid-template-columns: 42px 1fr 42px;
+  grid-template-columns: 1fr;
   gap: 6px;
   align-items: center;
 }
-.zoom-controls button {
-  padding: 10px;
-  border-radius: 10px;
-  background: #0f3460;
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
+.zoom-controls label {
+  display: grid;
+  gap: 5px;
+  color: #9ea7c2;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.zoom-controls input {
+  width: 100%;
+  accent-color: #64e8ff;
 }
 .zoom-controls span {
   color: #dbe4ff;
@@ -525,6 +604,13 @@ button {
     <h1>BeatSync</h1>
     <p class="subtitle">Generador Beat Sage + export Song.js</p>
 
+    <div class="generator-tabs">
+      <button class="generator-tab-btn active" data-generator="beatsage" type="button">BeatSage</button>
+      <button class="generator-tab-btn" data-generator="librosa" type="button">Librosa</button>
+    </div>
+
+    <div class="generator-view active" id="beatsageGeneratorView">
+
     <div class="upload-zone" id="uploadZone">
       <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.ogg,.flac,.aiff,.aac,.m4a">
       <div class="upload-icon">&#x1F3B5;</div>
@@ -543,10 +629,6 @@ button {
       <label>Song Title</label>
       <input type="text" id="songTitle" placeholder="Enter song title...">
     </div>
-    <div class="form-group">
-      <label>Artist</label>
-      <input type="text" id="songArtist" placeholder="Enter artist name...">
-    </div>
 
     <div class="form-group">
       <label>Difficulties</label>
@@ -562,17 +644,17 @@ button {
       <label>Game Mode</label>
       <div class="form-row" id="modes">
         <span class="chip" data-value="Standard">Standard</span>
-        <span class="chip selected" data-value="OneSaber">One Saber</span>
-        <span class="chip" data-value="NoArrows">No Arrows</span>
-        <span class="chip" data-value="90Degree">90°</span>
-        <span class="chip" data-value="360Degree">360°</span>
+        <span class="chip selected" data-value="OneSaber">Flow</span>
+        <span class="chip" data-value="NoArrows">No Bombs</span>
+        <span class="chip" data-value="90Degree">v1</span>
+        <span class="chip" data-value="360Degree">v2</span>
       </div>
     </div>
 
     <div class="form-group">
       <label>Song Events</label>
       <div class="form-row" id="events">
-        <span class="chip selected" data-value="DotBlocks">Dot Blocks</span>
+        <span class="chip selected" data-value="DotBlocks">Coin Tiles</span>
       </div>
     </div>
 
@@ -590,6 +672,57 @@ button {
 
     <button class="generate-btn" id="generateBtn">Generate Beatmap</button>
     <button class="download-inline" id="downloadInlineBtn">Download ZIP</button>
+
+    <div class="local-loader">
+      <div class="local-loader-title">Convert TXT beatmap to Song.js</div>
+      <div class="local-loader-grid">
+        <label class="local-file-input">
+          <strong>TXT beatmap</strong>
+          <span id="txtConvertName">Choose .txt file</span>
+          <input type="file" id="txtConvertInput" accept=".txt,text/plain">
+        </label>
+        <button class="game-btn secondary" id="convertTxtBtn" disabled>Convert to Song.js</button>
+      </div>
+      <div class="local-status" id="txtConvertStatus">Select a TXT beatmap file (time_ms lane per line) to convert to Song.js format.</div>
+    </div>
+    </div>
+
+    <div class="generator-view" id="librosaGeneratorView">
+      <div class="upload-zone" id="librosaUploadZone">
+        <input type="file" id="librosaFileInput" accept=".mp3,.ogg,.oga,audio/mpeg,audio/mp3,audio/ogg,audio/x-ogg">
+        <div class="upload-icon">&#x1F3B6;</div>
+        <div class="upload-text">Drop an audio file here or click to browse</div>
+        <div class="upload-hint">MP3 or OGG. Generates Easy, Normal, Hard and Expert via Librosa.</div>
+      </div>
+
+      <div class="file-info" id="librosaFileInfo">
+        <span>🎵</span>
+        <span class="name" id="librosaFileName"></span>
+        <span class="size" id="librosaFileSize"></span>
+        <button class="remove" id="removeLibrosaFile">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label>Timing offset (ms)</label>
+        <input type="text" id="librosaOffsetInput" value="0" inputmode="numeric" placeholder="Ej: -20">
+        <p class="game-note">Genera 4 dificultades usando el servicio Librosa de Hugging Face, sin Beat Sage.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Redoble (ms)</label>
+        <input type="text" id="librosaRedobleInput" value="180" inputmode="numeric" placeholder="Ej: 180">
+        <p class="game-note">Notas consecutivas más cercanas que este valor quedan en el mismo lane.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Zigzag (ms)</label>
+        <input type="text" id="librosaZigzagInput" value="420" inputmode="numeric" placeholder="Ej: 420">
+        <p class="game-note">Notas entre redoble y zigzag pasan a lanes adyacentes.</p>
+      </div>
+
+      <button class="generate-btn" id="generateLibrosaBtn">Generate with Librosa</button>
+      <button class="download-inline" id="librosaDownloadInlineBtn">Download ZIP</button>
+    </div>
   </section>
 
   <section class="game-panel">
@@ -610,23 +743,6 @@ button {
       </div>
     </div>
 
-    <div class="local-loader">
-      <div class="local-loader-title">Load previous song from disk</div>
-      <div class="local-loader-grid">
-        <label class="local-file-input">
-          <strong>Audio file</strong>
-          <span id="localAudioName">Choose .ogg, .mp3 or .wav</span>
-          <input type="file" id="localAudioInput" accept="audio/*,.ogg,.mp3,.wav">
-        </label>
-        <label class="local-file-input">
-          <strong>Beatmap JS</strong>
-          <span id="localJsName">Choose Song.js</span>
-          <input type="file" id="localJsInput" accept=".js,text/javascript,application/javascript">
-        </label>
-      </div>
-      <div class="local-status" id="localLoadStatus">Load both files to play a previously converted song without calling the API.</div>
-    </div>
-
     <div class="panel-view rhythm-view active" id="rhythmView">
       <label class="trainer-toggle">
         <input type="checkbox" id="trainerToggle">
@@ -642,9 +758,15 @@ button {
 
       <button class="game-btn game-start-btn" id="gameStartBtn" disabled>Start</button>
 
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <button class="game-btn secondary" id="gamePauseBtn" disabled>Pause</button>
+        <button class="game-btn secondary" id="gameRestartBtn" disabled>Restart</button>
+      </div>
+
       <div class="game-canvas-wrap" id="gameWrap">
         <canvas id="gameCanvas"></canvas>
         <div class="heart-hud" id="heartHud"></div>
+        <div class="lyrics-hud" id="lyricsHud"></div>
         <div class="damage-flash" id="damageFlash"></div>
         <div class="game-overlay" id="gameOverlay">
           <div class="game-message">
@@ -653,22 +775,30 @@ button {
           </div>
         </div>
       </div>
-      <p class="game-note">Beatmap parser accepts `SongX_array[i]= [time,lane,flag]`. If `time` is greater than 1000 it is treated as milliseconds, otherwise as seconds.</p>
+      <p class="game-note">Beatmap parser accepts Song.js arrays and TXT format (time_ms lane). If time > 1000 in JS arrays it is treated as ms.</p>
     </div>
 
     <div class="panel-view visualizer-view" id="visualizerView">
       <div class="visualizer-toolbar">
         <button class="game-btn secondary" id="visualizerPlayBtn" disabled>Play visualizer</button>
-        <button class="game-btn secondary" id="acceptChangesBtn" disabled>Accept changes</button>
+        <button class="game-btn secondary" id="acceptChangesBtn" disabled>Save</button>
         <button class="game-btn secondary" id="undoEditBtn" disabled>Undo</button>
         <button class="game-btn secondary" id="resetAllBtn" disabled>Reset all</button>
+        <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download current beatmap</button>
         <label class="edit-step-control">Step ms
           <input type="text" id="editStepInput" value="10" inputmode="numeric">
         </label>
         <div class="zoom-controls">
-          <button id="zoomOutBtn" type="button">-</button>
+          <label>Zoom
+            <input id="visualizerZoomSlider" type="range" min="8" max="180" step="1" value="38">
+          </label>
           <span id="zoomLabel">Zoom 38 px/s</span>
-          <button id="zoomInBtn" type="button">+</button>
+        </div>
+        <div class="zoom-controls">
+          <label>Flow
+            <input id="flowSlider" type="range" min="0" max="100" step="1" value="0">
+          </label>
+          <span id="flowLabel">Flow 0%</span>
         </div>
         <div class="note-reduction-control">
           <label>Reduce %
@@ -685,7 +815,57 @@ button {
         <input class="visualizer-seek-slider" id="visualizerSeekSlider" type="range" min="0" max="0" step="0.01" value="0" disabled>
         <div class="visualizer-empty" id="visualizerEmpty">Load a generated or local song to inspect the full beatmap. Drag vertically to move through time, click to seek, and press Space to play/pause.</div>
       </div>
-      <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes affect the game and downloaded ZIP only after Accept changes.</p>
+      <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes affect the game and downloaded ZIP only after Save.</p>
+    </div>
+
+    <div class="local-loader">
+      <div class="local-loader-title">Load previous song from disk</div>
+      <div class="local-loader-grid">
+        <label class="local-file-input">
+          <strong>Audio file</strong>
+          <span id="localAudioName">Choose .ogg, .mp3 or .wav</span>
+          <input type="file" id="localAudioInput" accept="audio/*,.ogg,.mp3,.wav">
+        </label>
+        <label class="local-file-input">
+          <strong>Beatmap file</strong>
+          <span id="localJsName">Choose Song.js or .txt</span>
+          <input type="file" id="localJsInput" accept=".js,.txt,text/javascript,application/javascript,text/plain">
+        </label>
+      </div>
+      <div class="local-status" id="localLoadStatus">Load both files to play a previously converted song without calling the API.</div>
+    </div>
+
+    <div class="local-loader">
+      <div class="local-loader-title">Override song playback</div>
+      <div class="local-loader-grid">
+        <label class="local-file-input">
+          <strong>Playback audio</strong>
+          <span id="overrideAudioName">Use generated/original audio</span>
+          <input type="file" id="overrideAudioInput" accept="audio/*,.ogg,.mp3,.wav,.m4a,.aac,.flac">
+        </label>
+        <button class="game-btn secondary" id="clearOverrideAudioBtn" disabled>Clear override</button>
+      </div>
+      <div class="local-status" id="overrideAudioStatus">Optional: load a full mix to play/preview with the same beatmap.</div>
+    </div>
+
+    <div class="local-loader">
+      <div class="local-loader-title">Load lyrics</div>
+      <div class="local-loader-grid">
+        <label class="local-file-input">
+          <strong>Lyrics file</strong>
+          <span id="lyricsFileName">Choose lyrics .txt</span>
+          <input type="file" id="lyricsFileInput" accept=".txt,text/plain">
+        </label>
+        <button class="game-btn secondary" id="clearLyricsBtn" disabled>Clear lyrics</button>
+      </div>
+      <div class="lyrics-shift-control">
+        <label>Lyrics shift (ms)
+          <input type="range" id="lyricsShiftSlider" min="-3000" max="3000" step="10" value="0">
+        </label>
+        <input type="text" id="lyricsShiftInput" value="0" inputmode="numeric">
+      </div>
+      <button class="game-btn secondary" id="downloadAdjustedLyricsBtn" disabled>Download adjusted lyrics</button>
+      <div class="local-status" id="lyricsStatus">Format: start_ms end_ms @phrase word. Timing starts when the song starts, after the READY pre-roll.</div>
     </div>
   </section>
 </main>
@@ -715,12 +895,17 @@ const state = {
   isGenerating: false,
   generatedZipBlob: null,
   generatedAudioBlob: null,
+  overrideAudioBlob: null,
+  lyricsLines: [],
   generatedMaps: {},
   generatedMapFiles: {},
   originalMaps: {},
 };
 
 const $ = (sel) => document.querySelector(sel);
+const generatorTabButtons = document.querySelectorAll('.generator-tab-btn');
+const beatsageGeneratorView = $('#beatsageGeneratorView');
+const librosaGeneratorView = $('#librosaGeneratorView');
 const uploadZone = $('#uploadZone');
 const fileInput = $('#fileInput');
 const fileInfo = $('#fileInfo');
@@ -728,6 +913,17 @@ const fileName = $('#fileName');
 const fileSize = $('#fileSize');
 const removeFileBtn = $('#removeFile');
 const generateBtn = $('#generateBtn');
+const librosaUploadZone = $('#librosaUploadZone');
+const librosaFileInput = $('#librosaFileInput');
+const librosaFileInfo = $('#librosaFileInfo');
+const librosaFileName = $('#librosaFileName');
+const librosaFileSize = $('#librosaFileSize');
+const removeLibrosaFileBtn = $('#removeLibrosaFile');
+const librosaOffsetInput = $('#librosaOffsetInput');
+const librosaRedobleInput = $('#librosaRedobleInput');
+const librosaZigzagInput = $('#librosaZigzagInput');
+const generateLibrosaBtn = $('#generateLibrosaBtn');
+const librosaDownloadInlineBtn = $('#librosaDownloadInlineBtn');
 const modal = $('#modal');
 const progressFill = $('#progressFill');
 const progressPct = $('#progressPct');
@@ -736,14 +932,16 @@ const errorText = $('#errorText');
 const downloadBtn = $('#downloadBtn');
 const closeBtn = $('#closeBtn');
 const songTitle = $('#songTitle');
-const songArtist = $('#songArtist');
 const redobleInput = $('#redobleInput');
 const zigzagInput = $('#zigzagInput');
 const difficultySelect = $('#difficultySelect');
 const gameStartBtn = $('#gameStartBtn');
+const gamePauseBtn = $('#gamePauseBtn');
+const gameRestartBtn = $('#gameRestartBtn');
 const trainerToggle = $('#trainerToggle');
 const downloadInlineBtn = $('#downloadInlineBtn');
 const overlay = $('#gameOverlay');
+const lyricsHud = $('#lyricsHud');
 const gameWrap = $('#gameWrap');
 const heartHud = $('#heartHud');
 const damageFlash = $('#damageFlash');
@@ -756,6 +954,21 @@ const localJsInput = $('#localJsInput');
 const localAudioName = $('#localAudioName');
 const localJsName = $('#localJsName');
 const localLoadStatus = $('#localLoadStatus');
+const overrideAudioInput = $('#overrideAudioInput');
+const overrideAudioName = $('#overrideAudioName');
+const clearOverrideAudioBtn = $('#clearOverrideAudioBtn');
+const overrideAudioStatus = $('#overrideAudioStatus');
+const lyricsFileInput = $('#lyricsFileInput');
+const lyricsFileName = $('#lyricsFileName');
+const lyricsShiftSlider = $('#lyricsShiftSlider');
+const lyricsShiftInput = $('#lyricsShiftInput');
+const clearLyricsBtn = $('#clearLyricsBtn');
+const downloadAdjustedLyricsBtn = $('#downloadAdjustedLyricsBtn');
+const lyricsStatus = $('#lyricsStatus');
+const txtConvertInput = $('#txtConvertInput');
+const txtConvertName = $('#txtConvertName');
+const convertTxtBtn = $('#convertTxtBtn');
+const txtConvertStatus = $('#txtConvertStatus');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const rhythmView = $('#rhythmView');
 const visualizerView = $('#visualizerView');
@@ -764,10 +977,12 @@ const visualizerPlayBtn = $('#visualizerPlayBtn');
 const acceptChangesBtn = $('#acceptChangesBtn');
 const undoEditBtn = $('#undoEditBtn');
 const resetAllBtn = $('#resetAllBtn');
+const downloadCurrentMapBtn = $('#downloadCurrentMapBtn');
 const editStepInput = $('#editStepInput');
-const zoomOutBtn = $('#zoomOutBtn');
-const zoomInBtn = $('#zoomInBtn');
+const visualizerZoomSlider = $('#visualizerZoomSlider');
 const zoomLabel = $('#zoomLabel');
+const flowSlider = $('#flowSlider');
+const flowLabel = $('#flowLabel');
 const noteReductionInput = $('#noteReductionInput');
 const applyReductionBtn = $('#applyReductionBtn');
 const visualizerSeekSlider = $('#visualizerSeekSlider');
@@ -777,7 +992,17 @@ const visualizerEmpty = $('#visualizerEmpty');
 const visualizerEditStatus = $('#visualizerEditStatus');
 let localAudioBlob = null;
 let localBeatmapText = null;
+let librosaFile = null;
 let activeTab = 'rhythm';
+
+generatorTabButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const active = button.dataset.generator;
+    generatorTabButtons.forEach(btn => btn.classList.toggle('active', btn === button));
+    beatsageGeneratorView.classList.toggle('active', active === 'beatsage');
+    librosaGeneratorView.classList.toggle('active', active === 'librosa');
+  });
+});
 
 tabButtons.forEach(button => {
   button.addEventListener('click', () => {
@@ -813,6 +1038,16 @@ uploadZone.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 
+librosaUploadZone.addEventListener('click', () => librosaFileInput.click());
+librosaFileInput.addEventListener('change', e => e.target.files.length && handleLibrosaFile(e.target.files[0]));
+librosaUploadZone.addEventListener('dragover', e => { e.preventDefault(); librosaUploadZone.classList.add('drag-over'); });
+librosaUploadZone.addEventListener('dragleave', () => librosaUploadZone.classList.remove('drag-over'));
+librosaUploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  librosaUploadZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) handleLibrosaFile(e.dataTransfer.files[0]);
+});
+
 function handleFile(file) {
   const maxSize = 32 * 1024 * 1024;
   if (file.size > maxSize) return alert('File too large. Max 32MB.');
@@ -824,11 +1059,28 @@ function handleFile(file) {
   if (!songTitle.value) songTitle.value = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ').trim();
 }
 
+function handleLibrosaFile(file) {
+  const maxSize = 80 * 1024 * 1024;
+  if (file.size > maxSize) return alert('File too large. Max 80MB.');
+  librosaFile = file;
+  librosaUploadZone.classList.add('has-file');
+  librosaFileName.textContent = file.name;
+  librosaFileSize.textContent = formatSize(file.size);
+  librosaFileInfo.classList.add('visible');
+}
+
 removeFileBtn.addEventListener('click', () => {
   state.file = null;
   fileInput.value = '';
   uploadZone.classList.remove('has-file');
   fileInfo.classList.remove('visible');
+});
+
+removeLibrosaFileBtn.addEventListener('click', () => {
+  librosaFile = null;
+  librosaFileInput.value = '';
+  librosaUploadZone.classList.remove('has-file');
+  librosaFileInfo.classList.remove('visible');
 });
 
 function formatSize(bytes) {
@@ -842,7 +1094,6 @@ function validate() {
   const zigzag = Number(zigzagInput.value);
   if (!state.file) return 'Please select an audio file.';
   if (!songTitle.value.trim()) return 'Please enter a song title.';
-  if (!songArtist.value.trim()) return 'Please enter an artist name.';
   if (state.difficulties.length === 0) return 'Select at least one difficulty.';
   if (state.modes.length === 0) return 'Select at least one game mode.';
   if (Number.isNaN(redoble) || redoble < 0) return 'Redoble must be a positive number in milliseconds.';
@@ -852,6 +1103,7 @@ function validate() {
 }
 
 generateBtn.addEventListener('click', startGeneration);
+generateLibrosaBtn.addEventListener('click', startLibrosaGeneration);
 
 async function startGeneration() {
   const err = validate();
@@ -868,6 +1120,7 @@ async function startGeneration() {
   gameStartBtn.disabled = true;
   difficultySelect.disabled = true;
   downloadInlineBtn.classList.remove('visible');
+  librosaDownloadInlineBtn.classList.remove('visible');
 
   modal.classList.add('active');
   progressFill.style.width = '0%';
@@ -880,7 +1133,6 @@ async function startGeneration() {
     const formData = new FormData();
     formData.append('audio_file', state.file);
     formData.append('audio_metadata_title', songTitle.value.trim());
-    formData.append('audio_metadata_artist', songArtist.value.trim());
     formData.append('difficulties', state.difficulties.join(','));
     formData.append('modes', state.modes.join(','));
     formData.append('events', state.events.join(','));
@@ -924,6 +1176,71 @@ async function startGeneration() {
   }
 }
 
+async function startLibrosaGeneration() {
+  if (!librosaFile) return alert('Please select an audio file for Librosa generation.');
+  const timingOffset = Number(librosaOffsetInput.value || 0);
+  const redobleMs = Number(librosaRedobleInput.value || 0);
+  const zigzagMs = Number(librosaZigzagInput.value || 0);
+  if (Number.isNaN(timingOffset)) return alert('Timing offset must be a number in milliseconds.');
+  if (Number.isNaN(redobleMs) || redobleMs < 0) return alert('Redoble must be a positive number in milliseconds.');
+  if (Number.isNaN(zigzagMs) || zigzagMs < 0) return alert('Zigzag must be a positive number in milliseconds.');
+  if (zigzagMs <= redobleMs) return alert('Zigzag must be greater than redoble.');
+
+  state.isGenerating = true;
+  state.jobId = null;
+  state.downloadUrl = null;
+  state.generatedZipBlob = null;
+  state.generatedAudioBlob = null;
+  state.generatedMaps = {};
+  state.generatedMapFiles = {};
+  state.originalMaps = {};
+  generateLibrosaBtn.disabled = true;
+  gameStartBtn.disabled = true;
+  difficultySelect.disabled = true;
+  downloadInlineBtn.classList.remove('visible');
+  librosaDownloadInlineBtn.classList.remove('visible');
+
+  modal.classList.add('active');
+  progressFill.style.width = '5%';
+  progressPct.textContent = '5%';
+  statusText.textContent = 'Uploading audio to Librosa generator...';
+  errorText.classList.remove('visible');
+  downloadBtn.classList.remove('visible');
+
+  try {
+    const formData = new FormData();
+    formData.append('audio', librosaFile);
+    formData.append('timing_offset_ms', String(Math.round(timingOffset)));
+    formData.append('with_lyrics', 'false');
+
+    const response = await fetch('/api/librosa/process', { method: 'POST', body: formData });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Librosa generation failed');
+
+    progressFill.style.width = '70%';
+    progressPct.textContent = '70%';
+    statusText.textContent = 'Loading generated difficulties...';
+
+    await loadLibrosaAssets(payload.downloads || [], librosaFile, { redobleMs, zigzagMs });
+
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+    statusText.textContent = 'Ready! Librosa beatmaps are loaded.';
+    downloadBtn.classList.add('visible');
+    downloadInlineBtn.classList.add('visible');
+    librosaDownloadInlineBtn.classList.add('visible');
+    modal.classList.remove('active');
+  } catch (err) {
+    console.error('Librosa generation error:', err);
+    errorText.textContent = err.message || 'Something went wrong';
+    errorText.classList.add('visible');
+    statusText.textContent = 'Failed';
+  } finally {
+    state.isGenerating = false;
+    generateLibrosaBtn.disabled = false;
+  }
+}
+
 async function pollHeartbeat(jobId) {
   let progress = 0;
   let fails = 0;
@@ -947,8 +1264,7 @@ async function pollHeartbeat(jobId) {
 
 function getDownloadName() {
   const title = songTitle.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
-  const artist = songArtist.value.trim().replace(/[^a-zA-Z0-9]/g, '_');
-  return `BeatSync_${artist || 'Artist'}_-_${title || 'Song'}_SongJS.zip`;
+  return `BeatSync_${title || 'Song'}_SongJS.zip`;
 }
 
 function buildSongJs(mapName, fileName, notes) {
@@ -976,7 +1292,7 @@ function buildSongJs(mapName, fileName, notes) {
 
 async function buildDownloadBlob() {
   if (!state.generatedZipBlob) throw new Error('No generated ZIP is available yet.');
-  if (visualizer.dirty) throw new Error('Accept visualizer changes before downloading the ZIP.');
+  if (visualizer.dirty) throw new Error('Save visualizer changes before downloading the ZIP.');
 
   const zip = await JSZip.loadAsync(state.generatedZipBlob);
   for (const [mapName, fileName] of Object.entries(state.generatedMapFiles)) {
@@ -997,6 +1313,17 @@ function triggerDownload(blob) {
   a.remove();
 }
 
+function triggerNamedDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function downloadCurrentZip() {
   try {
     const blob = await buildDownloadBlob();
@@ -1006,8 +1333,22 @@ async function downloadCurrentZip() {
   }
 }
 
+function downloadCurrentBeatmap() {
+  try {
+    if (!visualizer.mapName || !visualizer.notes.length) throw new Error('No beatmap is loaded in the visualizer.');
+    const fallbackFile = `Song1_${visualizer.mapName.replace(/[^a-zA-Z0-9_-]/g, '_')}.js`;
+    const fileName = state.generatedMapFiles[visualizer.mapName] || fallbackFile;
+    const js = buildSongJs(visualizer.mapName, fileName, visualizer.notes);
+    triggerNamedDownload(new Blob([js], { type: 'application/javascript;charset=utf-8' }), fileName);
+  } catch (err) {
+    alert(err.message || 'Could not download current beatmap');
+  }
+}
+
 downloadBtn.addEventListener('click', downloadCurrentZip);
 downloadInlineBtn.addEventListener('click', downloadCurrentZip);
+librosaDownloadInlineBtn.addEventListener('click', downloadCurrentZip);
+downloadCurrentMapBtn.addEventListener('click', downloadCurrentBeatmap);
 closeBtn.addEventListener('click', () => modal.classList.remove('active'));
 modal.addEventListener('click', e => e.target === modal && !state.isGenerating && modal.classList.remove('active'));
 
@@ -1040,6 +1381,44 @@ async function loadGameAssetsFromZip(zipBlob) {
   setPlayableAssets(state.generatedAudioBlob, state.generatedMaps, `${names.length} generated difficulty file(s) ready.`);
 }
 
+async function loadLibrosaAssets(downloads, audioFile, options = {}) {
+  const order = ['easy', 'normal', 'hard', 'expert'];
+  const labels = { easy: 'Easy', normal: 'Normal', hard: 'Hard', expert: 'Expert' };
+  const redobleMs = Math.max(0, Number(options.redobleMs || 0));
+  const zigzagMs = Math.max(0, Number(options.zigzagMs || 0));
+  const beatmapItems = downloads.filter(item => /^beatmap_(easy|normal|hard|expert)\.txt$/i.test(item.filename));
+  if (!beatmapItems.length) throw new Error('Librosa did not return playable beatmap TXT files.');
+
+  const maps = {};
+  for (const diff of order) {
+    const item = beatmapItems.find(entry => entry.filename.toLowerCase() === `beatmap_${diff}.txt`);
+    if (!item) continue;
+    const text = await fetch(item.url).then(response => {
+      if (!response.ok) throw new Error(`Could not load ${item.filename}`);
+      return response.text();
+    });
+    const notes = applyLaneTimingRules(parseTxtBeatmap(text), redobleMs, zigzagMs);
+    if (notes.length) maps[labels[diff]] = notes;
+  }
+
+  const names = Object.keys(maps);
+  if (!names.length) throw new Error('Librosa generated files, but no valid notes were found.');
+
+  const zip = new JSZip();
+  zip.file(audioFile.name, audioFile);
+  state.generatedMapFiles = {};
+  names.forEach((name, index) => {
+    const fileName = `Song${index + 1}_${name}.js`;
+    state.generatedMapFiles[name] = fileName;
+    zip.file(fileName, buildSongJs(name, fileName, maps[name]));
+  });
+
+  state.originalMaps = {};
+  state.generatedZipBlob = await zip.generateAsync({ type: 'blob' });
+  state.downloadUrl = URL.createObjectURL(state.generatedZipBlob);
+  setPlayableAssets(audioFile, maps, `${names.length} Librosa difficulty file(s) ready.`);
+}
+
 function setPlayableAssets(audioBlob, maps, message) {
   state.generatedAudioBlob = audioBlob;
   state.generatedMaps = maps;
@@ -1051,9 +1430,27 @@ function setPlayableAssets(audioBlob, maps, message) {
   difficultySelect.disabled = names.length === 0;
   gameStartBtn.disabled = names.length === 0 || !audioBlob;
   notesStat.textContent = names.length ? maps[names[0]].length : 0;
-  if (names.length) visualizer.load(audioBlob, maps[names[0]], names[0]).catch(err => console.error('Visualizer load error:', err));
+  if (names.length) visualizer.load(getPlaybackAudioBlob(), maps[names[0]], names[0]).catch(err => console.error('Visualizer load error:', err));
   overlay.style.display = 'flex';
   overlay.innerHTML = `<div class="game-message"><h3>Beatmap loaded</h3><p>${message} Choose a difficulty and press Play.</p></div>`;
+}
+
+function getPlaybackAudioBlob() {
+  return state.overrideAudioBlob || state.generatedAudioBlob;
+}
+
+async function reloadActivePlaybackAudio(message) {
+  const audioBlob = getPlaybackAudioBlob();
+  const mapName = difficultySelect.value || Object.keys(state.generatedMaps)[0];
+  const notes = state.generatedMaps[mapName] || [];
+  if (!audioBlob || !notes.length) return;
+  notesStat.textContent = notes.length;
+  await visualizer.load(audioBlob, notes, mapName);
+  await game.load(audioBlob, notes);
+  if (message) {
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `<div class="game-message"><h3>Audio override updated</h3><p>${message}</p></div>`;
+  }
 }
 
 function parseSongJs(source) {
@@ -1074,6 +1471,202 @@ function cloneNotes(notes) {
   return notes.map(note => ({ time: note.time, lane: note.lane, judged: false, mesh: null }));
 }
 
+function parseTxtBeatmap(text) {
+  const notes = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+    const parts = trimmed.split(/\s+/);
+    if (parts.length < 2) continue;
+    const timeMs = parseInt(parts[0], 10);
+    const lane = parseInt(parts[1], 10);
+    if (!Number.isFinite(timeMs) || !Number.isFinite(lane)) continue;
+    if (lane < 1 || lane > 5) continue;
+    notes.push({ time: timeMs / 1000, lane, judged: false, mesh: null });
+  }
+  return notes.sort((a, b) => a.time - b.time);
+}
+
+function getAdjacentZigzagLane(previousLane, targetLane, direction) {
+  if (targetLane > previousLane) return { lane: Math.min(5, previousLane + 1), direction: -1 };
+  if (targetLane < previousLane) return { lane: Math.max(1, previousLane - 1), direction: 1 };
+
+  let nextDirection = direction;
+  if (previousLane <= 1) nextDirection = 1;
+  if (previousLane >= 5) nextDirection = -1;
+
+  return {
+    lane: previousLane + nextDirection,
+    direction: nextDirection * -1,
+  };
+}
+
+function applyLaneTimingRules(notes, redobleMs, zigzagMs) {
+  const redobleSeconds = Math.max(0, Number(redobleMs || 0)) / 1000;
+  const zigzagSeconds = Math.max(0, Number(zigzagMs || 0)) / 1000;
+  let previousTime = null;
+  let previousLane = null;
+  let zigzagDirection = 1;
+
+  return notes
+    .slice()
+    .sort((a, b) => a.time - b.time)
+    .map(note => {
+      let lane = Math.max(1, Math.min(5, Math.round(note.lane)));
+      if (previousTime !== null) {
+        const delta = note.time - previousTime;
+        if (redobleSeconds > 0 && delta < redobleSeconds) {
+          lane = previousLane;
+        } else if (zigzagSeconds > 0 && delta < zigzagSeconds) {
+          const zigzag = getAdjacentZigzagLane(previousLane, lane, zigzagDirection);
+          lane = zigzag.lane;
+          zigzagDirection = zigzag.direction;
+        }
+      }
+      previousTime = note.time;
+      previousLane = lane;
+      return { ...note, lane, judged: false, mesh: null };
+    });
+}
+
+function getCurrentTimingRuleValues() {
+  const useLibrosa = librosaGeneratorView.classList.contains('active');
+  const redobleSource = useLibrosa ? librosaRedobleInput : redobleInput;
+  const zigzagSource = useLibrosa ? librosaZigzagInput : zigzagInput;
+  const redobleMs = Math.max(0, Number(redobleSource.value || 0));
+  const zigzagMs = Math.max(redobleMs + 1, Number(zigzagSource.value || redobleMs + 1));
+  return { redobleMs, zigzagMs };
+}
+
+function applyFlowDistribution(notes, flowPercent, redobleMs, zigzagMs) {
+  const strength = Math.max(0, Math.min(100, Number(flowPercent || 0))) / 100;
+  const sorted = cloneNotes(notes).sort((a, b) => a.time - b.time);
+  if (strength <= 0 || sorted.length <= 1) return sorted;
+
+  const redobleSeconds = Math.max(0, Number(redobleMs || 0)) / 1000;
+  const zigzagSeconds = Math.max(0, Number(zigzagMs || 0)) / 1000;
+  const lastTime = sorted[sorted.length - 1].time || 1;
+  const phrase = Math.max(1.2, Math.min(4.6, lastTime / Math.max(2, sorted.length / 12)));
+  let previousLane = Math.max(1, Math.min(5, Math.round(sorted[0].lane)));
+  let previousTime = sorted[0].time;
+
+  return sorted.map((note, index) => {
+    if (index === 0) {
+      const first = { ...note, lane: previousLane, judged: false, mesh: null };
+      return first;
+    }
+
+    const delta = note.time - previousTime;
+    let lane = Math.max(1, Math.min(5, Math.round(note.lane)));
+
+    if (redobleSeconds > 0 && delta < redobleSeconds) {
+      lane = previousLane;
+    } else {
+      const wave = Math.sin((note.time / phrase) * Math.PI * 2 + index * 0.47);
+      const diagonal = ((index % 5) - 2) * 0.22;
+      const flowLane = Math.max(1, Math.min(5, Math.round(3 + wave * 2 + diagonal)));
+      lane = Math.round(lane * (1 - strength) + flowLane * strength);
+      lane = Math.max(1, Math.min(5, lane));
+
+      if (zigzagSeconds > 0 && delta < zigzagSeconds && Math.abs(lane - previousLane) > 1) {
+        lane = previousLane + Math.sign(lane - previousLane);
+      }
+    }
+
+    previousLane = lane;
+    previousTime = note.time;
+    return { ...note, lane, judged: false, mesh: null };
+  });
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+}
+
+function parseLyricsText(text) {
+  const rows = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+    const parts = line.split(/\s+/);
+    if (parts.length < 3) continue;
+    const startMs = Number.parseInt(parts[0], 10);
+    const endMs = Number.parseInt(parts[1], 10);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) continue;
+
+    let marker = 0;
+    let rawWord = '';
+    const markerToken = parts[2] || '';
+    if (/^@\d+$/.test(markerToken)) {
+      marker = Number(markerToken.slice(1));
+      rawWord = parts.slice(3).join(' ');
+    } else if (/^@+$/.test(markerToken)) {
+      marker = markerToken.length;
+      rawWord = parts.slice(3).join(' ');
+    } else {
+      rawWord = parts.slice(2).join(' ');
+      const trailingNumberMarker = rawWord.match(/@([0-9]+)$/);
+      const trailingAtMarker = rawWord.match(/(@+)$/);
+      if (trailingNumberMarker) marker = Number(trailingNumberMarker[1]);
+      else if (trailingAtMarker) marker = trailingAtMarker[1].length;
+    }
+
+    const word = rawWord.replace(/@\d+$/, '').replace(/@+$/, '').trim();
+    if (!word) continue;
+    rows.push({ start: startMs / 1000, end: Math.max(startMs, endMs) / 1000, text: word, marker });
+  }
+
+  const lines = [];
+  let current = null;
+  for (const word of rows.sort((a, b) => a.start - b.start)) {
+    const key = word.marker > 0 ? word.marker : Symbol('single');
+    if (!current || current.key !== key) {
+      current = { key, words: [], start: word.start, end: word.end };
+      lines.push(current);
+    }
+    current.words.push(word);
+    current.start = Math.min(current.start, word.start);
+    current.end = Math.max(current.end, word.end);
+  }
+
+  return lines;
+}
+
+function getLyricsShiftMs() {
+  const value = Number(lyricsShiftInput.value || 0);
+  return Number.isFinite(value) ? Math.max(-3000, Math.min(3000, Math.round(value))) : 0;
+}
+
+function setLyricsShift(value, updateText = true) {
+  const shift = Math.max(-3000, Math.min(3000, Math.round(Number(value) || 0)));
+  lyricsShiftSlider.value = String(shift);
+  if (updateText) lyricsShiftInput.value = String(shift);
+  if (state.lyricsLines.length) lyricsStatus.textContent = `Lyrics shift: ${shift}ms. Positive delays lyrics, negative advances them.`;
+  return shift;
+}
+
+function buildAdjustedLyricsJs(lines, shiftMs) {
+  const rows = [
+    '//------------------------------------------------',
+    '// BeatSync adjusted lyrics',
+    '// lyrics[i] = [start_ms, end_ms, phrase_id, "word"]',
+    '//------------------------------------------------',
+    'var lyrics = [];',
+  ];
+  let index = 0;
+  for (const line of lines) {
+    for (const word of line.words) {
+      const startMs = Math.max(0, Math.round(word.start * 1000 + shiftMs));
+      const endMs = Math.max(startMs, Math.round(word.end * 1000 + shiftMs));
+      const phraseId = Number.isFinite(word.marker) ? word.marker : 0;
+      rows.push(`    lyrics[${index}]= [${startMs},${endMs},${phraseId},${JSON.stringify(word.text)}];`);
+      index++;
+    }
+  }
+  return rows.join('\n') + '\n';
+}
+
 localAudioInput.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1090,23 +1683,133 @@ localJsInput.addEventListener('change', async e => {
   await tryLoadLocalSong();
 });
 
+overrideAudioInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  state.overrideAudioBlob = file;
+  overrideAudioName.textContent = file.name;
+  overrideAudioStatus.textContent = `Override active: ${file.name}. Beatmaps and ZIP remain unchanged.`;
+  clearOverrideAudioBtn.disabled = false;
+  await reloadActivePlaybackAudio('The game and visualizer now use the override audio.');
+});
+
+clearOverrideAudioBtn.addEventListener('click', async () => {
+  state.overrideAudioBlob = null;
+  overrideAudioInput.value = '';
+  overrideAudioName.textContent = 'Use generated/original audio';
+  overrideAudioStatus.textContent = 'Override cleared. Playback uses the audio that generated or loaded the beatmap.';
+  clearOverrideAudioBtn.disabled = true;
+  await reloadActivePlaybackAudio('Playback returned to the original beatmap audio.');
+});
+
+lyricsFileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const lines = parseLyricsText(await file.text());
+  state.lyricsLines = lines;
+  lyricsFileName.textContent = file.name;
+  clearLyricsBtn.disabled = lines.length === 0;
+  downloadAdjustedLyricsBtn.disabled = lines.length === 0;
+  lyricsStatus.textContent = lines.length
+    ? `Lyrics loaded: ${lines.length} phrase line(s). Timing starts at music playback, after READY.`
+    : 'No valid lyric rows found. Expected: start_ms end_ms @phrase word';
+  game.setLyrics(lines);
+});
+
+lyricsShiftSlider.addEventListener('input', () => {
+  setLyricsShift(lyricsShiftSlider.value);
+});
+
+lyricsShiftInput.addEventListener('input', () => {
+  if (lyricsShiftInput.value.trim() === '') return;
+  setLyricsShift(lyricsShiftInput.value, false);
+});
+
+lyricsShiftInput.addEventListener('change', () => {
+  setLyricsShift(lyricsShiftInput.value);
+});
+
+downloadAdjustedLyricsBtn.addEventListener('click', () => {
+  if (!state.lyricsLines.length) return;
+  const shift = getLyricsShiftMs();
+  const js = buildAdjustedLyricsJs(state.lyricsLines, shift);
+  triggerNamedDownload(new Blob([js], { type: 'application/javascript;charset=utf-8' }), 'Lyrics_adjusted.js');
+});
+
+clearLyricsBtn.addEventListener('click', () => {
+  state.lyricsLines = [];
+  lyricsFileInput.value = '';
+  lyricsFileName.textContent = 'Choose lyrics .txt';
+  lyricsStatus.textContent = 'Lyrics cleared.';
+  setLyricsShift(0);
+  clearLyricsBtn.disabled = true;
+  downloadAdjustedLyricsBtn.disabled = true;
+  game.setLyrics([]);
+});
+
 async function tryLoadLocalSong() {
   if (!localAudioBlob || !localBeatmapText) {
-    localLoadStatus.textContent = 'Load both the audio file and its Song.js beatmap.';
+    localLoadStatus.textContent = 'Load both the audio file and its beatmap file (Song.js or .txt).';
     return;
   }
 
-  const notes = parseSongJs(localBeatmapText);
+  const firstLine = localBeatmapText.split(/\r?\n/).find(l => l.trim() && !l.trim().startsWith('//') && !l.trim().startsWith('#'));
+  const isTxt = firstLine && /^\d+\s+\d+\s*$/.test(firstLine.trim());
+  const notes = isTxt ? parseTxtBeatmap(localBeatmapText) : parseSongJs(localBeatmapText);
   if (!notes.length) {
-    localLoadStatus.textContent = 'The JS file was loaded, but no valid good notes were found.';
+    localLoadStatus.textContent = 'The file was loaded, but no valid notes were found (check format: time_ms lane or SongX_array).';
     gameStartBtn.disabled = true;
     return;
   }
 
-  const beatmapName = localJsName.textContent.replace(/\.js$/i, '') || 'Local Song';
+  const beatmapName = localJsName.textContent.replace(/\.(js|txt)$/i, '') || 'Local Song';
   setPlayableAssets(localAudioBlob, { [beatmapName]: notes }, `${notes.length} notes loaded from local files.`);
   localLoadStatus.textContent = `Ready: ${localAudioName.textContent} + ${localJsName.textContent} (${notes.length} notes).`;
 }
+
+function txtToSongJs(txtContent, fileName) {
+  const songName = fileName.replace(/\.txt$/i, '');
+  const notes = parseTxtBeatmap(txtContent);
+  const lines = [
+    '//------------------------------------------------',
+    `// BeatSync converted - ${songName}`,
+    '//------------------------------------------------',
+    'var Song1_array = [];',
+  ];
+  notes.forEach((note, i) => {
+    const time = parseFloat(note.time.toFixed(4));
+    lines.push(`    Song1_array[${i}]= [${time},${note.lane},0];`);
+  });
+  return { js: lines.join('\n'), count: notes.length };
+}
+
+txtConvertInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  txtConvertName.textContent = file.name;
+  convertTxtBtn.disabled = false;
+});
+
+convertTxtBtn.addEventListener('click', async () => {
+  const file = txtConvertInput.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const result = txtToSongJs(text, file.name);
+    const blob = new Blob([result.js], { type: 'application/javascript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name.replace(/\.txt$/i, '') + '.js';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    txtConvertStatus.textContent = `Converted: ${result.count} notes → ${a.download}`;
+  } catch (err) {
+    txtConvertStatus.textContent = 'Error converting file. Make sure it uses "time_ms lane" format per line.';
+  }
+});
 
 class BeatmapVisualizer {
   constructor(canvas) {
@@ -1189,7 +1892,7 @@ class BeatmapVisualizer {
   async load(audioBlob, notes, name) {
     this.stopSource();
     this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
-    this.audioBuffer = await this.audioContext.decodeAudioData(await audioBlob.arrayBuffer());
+    this.audioBuffer = await this.audioContext.decodeAudioData((await audioBlob.arrayBuffer()).slice(0));
     this.notes = notes.map(note => ({ ...note }));
     this.mapName = name || 'Beatmap';
     this.selectedIndex = -1;
@@ -1205,10 +1908,14 @@ class BeatmapVisualizer {
     acceptChangesBtn.disabled = true;
     undoEditBtn.disabled = true;
     resetAllBtn.disabled = false;
+    downloadCurrentMapBtn.disabled = this.notes.length === 0;
     applyReductionBtn.disabled = this.notes.length <= 2;
     visualizerSeekSlider.disabled = false;
     visualizerSeekSlider.max = this.duration.toFixed(2);
     visualizerSeekSlider.value = '0';
+    visualizerZoomSlider.value = String(Math.round(this.pixelsPerSecond));
+    flowSlider.value = '0';
+    this.updateFlowLabel();
     visualizerEmpty.style.display = 'none';
     visualizerTime.dataset.name = this.mapName;
     this.updateEditStatus();
@@ -1272,8 +1979,22 @@ class BeatmapVisualizer {
     this.draw();
   }
 
+  setZoomValue(value) {
+    const before = this.getTime();
+    this.pixelsPerSecond = Math.max(8, Math.min(180, Number(value) || 38));
+    this.viewTime = before;
+    this.startOffset = before;
+    this.updateZoomLabel();
+    this.draw();
+  }
+
   updateZoomLabel() {
     zoomLabel.textContent = `Zoom ${Math.round(this.pixelsPerSecond)} px/s`;
+    visualizerZoomSlider.value = String(Math.round(this.pixelsPerSecond));
+  }
+
+  updateFlowLabel() {
+    flowLabel.textContent = `Flow ${Math.round(Number(flowSlider.value || 0))}%`;
   }
 
   getEditStepSeconds() {
@@ -1307,6 +2028,63 @@ class BeatmapVisualizer {
     this.draw();
   }
 
+  addNoteAtCurrentTime() {
+    if (!this.audioBuffer) return;
+    this.captureUndo();
+    const selected = this.notes[this.selectedIndex];
+    const newNote = {
+      time: Math.max(0, Math.min(this.duration, this.getTime())),
+      lane: selected ? selected.lane : 3,
+      judged: false,
+      mesh: null,
+    };
+    this.notes.push(newNote);
+    this.notes.sort((a, b) => a.time - b.time);
+    const index = this.notes.indexOf(newNote);
+    this.selectedIndex = index;
+    this.selectedIndices = new Set([index]);
+    this.lastSelectedIndex = index;
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Added note: lane ${newNote.lane}, time ${newNote.time.toFixed(3)}s.`);
+    this.draw();
+  }
+
+  deleteSelectedNotes() {
+    const indices = [...this.selectedIndices].filter(index => this.notes[index]).sort((a, b) => b - a);
+    if (!indices.length) return;
+    this.captureUndo();
+    for (const index of indices) this.notes.splice(index, 1);
+    this.clearSelection();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Deleted ${indices.length} selected note(s).`);
+    this.draw();
+  }
+
+  applyFlow(value) {
+    this.updateFlowLabel();
+    const original = state.originalMaps[this.mapName];
+    if (!original) return;
+    const flow = Math.max(0, Math.min(100, Number(value || 0)));
+    const { redobleMs, zigzagMs } = getCurrentTimingRuleValues();
+    this.notes = applyFlowDistribution(original, flow, redobleMs, zigzagMs);
+    this.clearSelection();
+    this.dirty = flow > 0;
+    acceptChangesBtn.disabled = !this.dirty;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(flow > 0 ? `Flow applied at ${flow}%. Press Save to use it in the game and ZIP.` : 'Flow reset to the originally generated beatmap.');
+    this.draw();
+  }
+
   moveSelectedNote(laneDelta, timeDelta) {
     const indices = [...this.selectedIndices].filter(index => this.notes[index]);
     if (!indices.length) return;
@@ -1336,8 +2114,8 @@ class BeatmapVisualizer {
     this.restoreNotes(original, false);
     state.generatedMaps[this.mapName] = cloneNotes(original);
     notesStat.textContent = original.length;
-    if (difficultySelect.value === this.mapName && state.generatedAudioBlob) {
-      game.load(state.generatedAudioBlob, state.generatedMaps[this.mapName]).catch(err => console.error('Game load error:', err));
+    if (difficultySelect.value === this.mapName && getPlaybackAudioBlob()) {
+      game.load(getPlaybackAudioBlob(), state.generatedMaps[this.mapName]).catch(err => console.error('Game load error:', err));
     }
     this.updateEditStatus('All changes reset to the originally generated beatmap.');
   }
@@ -1359,10 +2137,10 @@ class BeatmapVisualizer {
     applyReductionBtn.disabled = accepted.length <= 2;
     notesStat.textContent = accepted.length;
     this.updateNoteTotal();
-    if (difficultySelect.value === this.mapName && state.generatedAudioBlob) {
-      game.load(state.generatedAudioBlob, accepted).catch(err => console.error('Game load error:', err));
+    if (difficultySelect.value === this.mapName && getPlaybackAudioBlob()) {
+      game.load(getPlaybackAudioBlob(), accepted).catch(err => console.error('Game load error:', err));
     }
-    this.updateEditStatus('Changes accepted. The game and Download ZIP now use this edited beatmap.');
+    this.updateEditStatus('Changes saved. The game and Download ZIP now use this edited beatmap.');
     this.draw();
   }
 
@@ -1387,7 +2165,7 @@ class BeatmapVisualizer {
       return;
     }
     visualizerEditStatus.textContent = this.dirty
-      ? 'Unsaved edits. Press Accept changes to use them in the game and ZIP.'
+      ? 'Unsaved edits. Press Save to use them in the game and ZIP.'
       : 'Click a note to select it. Shift-click another note to select a range. Use left/right to change lane and up/down to move time.';
   }
 
@@ -1618,6 +2396,10 @@ class RhythmHopGame {
     this.source = null;
     this.audioStartTime = 0;
     this.isPlaying = false;
+    this.isPaused = false;
+    this.preRollSeconds = 2;
+    this.invulnerabilitySeconds = 1.5;
+    this.invulnerableUntil = -Infinity;
     this.speed = 18;
     this.tileHitRadius = 1.75;
     this.ballGroundY = 0.66;
@@ -1629,6 +2411,7 @@ class RhythmHopGame {
     this.ballTargetX = 0;
     this.ballX = 0;
     this.dragging = false;
+    this.lyricsLines = state.lyricsLines || [];
 
     this.tileGroup = new THREE.Group();
     this.railGroup = new THREE.Group();
@@ -1640,6 +2423,11 @@ class RhythmHopGame {
     this.resize();
     addEventListener('resize', () => this.resize());
     this.loop();
+  }
+
+  setLyrics(lines) {
+    this.lyricsLines = Array.isArray(lines) ? lines : [];
+    this.updateLyricsHud(this.getAudioTime());
   }
 
   createWorld() {
@@ -1674,6 +2462,7 @@ class RhythmHopGame {
 
     const ballMat = new THREE.MeshStandardMaterial({ color: 0x72f7ff, emissive: 0x2deaff, emissiveIntensity: 1.6, metalness: .35, roughness: .2 });
     this.ball = new THREE.Mesh(new THREE.SphereGeometry(0.52, 36, 36), ballMat);
+    this.ballBaseOpacity = 1;
     this.scene.add(this.ball);
 
     const glow = new THREE.PointLight(0x62efff, 3.8, 12);
@@ -1684,7 +2473,8 @@ class RhythmHopGame {
     const pointerToWorldX = e => {
       const rect = this.canvas.getBoundingClientRect();
       const x = THREE.MathUtils.clamp((e.clientX - rect.left) / rect.width, 0, 1);
-      return THREE.MathUtils.lerp(5.3, -5.3, x);
+      const centered = (0.5 - x) * 2;
+      return THREE.MathUtils.clamp(centered * 10.6, -5.3, 5.3);
     };
     const down = e => {
       this.dragging = true;
@@ -1705,7 +2495,7 @@ class RhythmHopGame {
   async load(audioBlob, notes) {
     this.stop();
     this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
-    this.audioBuffer = await this.audioContext.decodeAudioData(await audioBlob.arrayBuffer());
+    this.audioBuffer = await this.audioContext.decodeAudioData((await audioBlob.arrayBuffer()).slice(0));
     this.notes = notes.map(note => ({ ...note, judged: false, mesh: null }));
     this.resetStats();
     this.buildTiles();
@@ -1736,6 +2526,10 @@ class RhythmHopGame {
     this.stop(false);
     await this.audioContext.resume();
     this.resetStats();
+    this.invulnerableUntil = -Infinity;
+    this.ball.visible = true;
+    this.ball.material.opacity = this.ballBaseOpacity;
+    this.ball.material.transparent = false;
     this.notes.forEach(note => {
       note.judged = false;
       if (note.mesh) {
@@ -1748,10 +2542,15 @@ class RhythmHopGame {
     this.source = this.audioContext.createBufferSource();
     this.source.buffer = this.audioBuffer;
     this.source.connect(this.audioContext.destination);
-    this.audioStartTime = this.audioContext.currentTime + 0.12;
+    this.audioStartTime = this.audioContext.currentTime + this.preRollSeconds;
     this.source.start(this.audioStartTime);
     this.isPlaying = true;
-    overlay.style.display = 'none';
+    this.isPaused = false;
+    gamePauseBtn.textContent = 'Pause';
+    gamePauseBtn.disabled = false;
+    gameRestartBtn.disabled = false;
+    overlay.style.display = 'flex';
+    overlay.innerHTML = '<div class="game-message"><h3>READY?</h3><p>Get in position.</p></div>';
   }
 
   stop(showOverlay = true) {
@@ -1761,7 +2560,40 @@ class RhythmHopGame {
       this.source = null;
     }
     this.isPlaying = false;
+    this.isPaused = false;
+    gamePauseBtn.disabled = true;
+    gameRestartBtn.disabled = true;
+    this.updateLyricsHud(-1);
+    this.ball.visible = true;
+    if (this.ball.material) {
+      this.ball.material.opacity = this.ballBaseOpacity;
+      this.ball.material.transparent = false;
+    }
     if (showOverlay) overlay.style.display = 'flex';
+  }
+
+  pause() {
+    if (!this.isPlaying || this.isPaused) return;
+    this.audioContext.suspend();
+    this.isPaused = true;
+    gamePauseBtn.textContent = 'Resume';
+  }
+
+  resume() {
+    if (!this.isPaused) return;
+    this.audioContext.resume();
+    this.isPaused = false;
+    gamePauseBtn.textContent = 'Pause';
+  }
+
+  togglePause() {
+    if (this.isPaused) this.resume();
+    else this.pause();
+  }
+
+  restart() {
+    this.stop(false);
+    this.play();
   }
 
   resetStats() {
@@ -1817,7 +2649,33 @@ class RhythmHopGame {
 
   getAudioTime() {
     if (!this.audioContext || !this.isPlaying) return 0;
-    return Math.max(0, this.audioContext.currentTime - this.audioStartTime);
+    return this.audioContext.currentTime - this.audioStartTime;
+  }
+
+  getLyricsTime(rawGameTime) {
+    return rawGameTime - getLyricsShiftMs() / 1000;
+  }
+
+  updateLyricsHud(songTime, rawGameTime = songTime) {
+    if (!lyricsHud) return;
+    if (!this.lyricsLines.length || !this.isPlaying || rawGameTime < 0 || songTime < 0) {
+      lyricsHud.style.display = 'none';
+      lyricsHud.innerHTML = '';
+      return;
+    }
+
+    const line = this.lyricsLines.find(item => songTime >= item.start - 0.45 && songTime <= item.end + 0.45);
+    if (!line) {
+      lyricsHud.style.display = 'none';
+      lyricsHud.innerHTML = '';
+      return;
+    }
+
+    lyricsHud.innerHTML = line.words.map(word => {
+      const active = songTime >= word.start && songTime <= word.end;
+      return `<span class="${active ? 'active-word' : ''}">${escapeHtml(word.text)}</span>`;
+    }).join(' ');
+    lyricsHud.style.display = 'block';
   }
 
   updateJudgement(t) {
@@ -1838,8 +2696,11 @@ class RhythmHopGame {
         }
       } else {
         this.combo = 0;
-        this.lives = Math.max(0, this.lives - 1);
-        this.triggerMissFeedback();
+        if (t >= this.invulnerableUntil) {
+          this.lives = Math.max(0, this.lives - 1);
+          this.invulnerableUntil = t + this.invulnerabilitySeconds;
+          this.triggerMissFeedback();
+        }
         if (note.mesh) note.mesh.visible = false;
       }
       this.updateLivesHud();
@@ -1854,6 +2715,13 @@ class RhythmHopGame {
 
   getJumpY(t) {
     if (!this.notes.length || !this.isPlaying) return this.ballGroundY + 0.18;
+
+    const firstNoteTime = this.notes[0].time;
+    if (t < firstNoteTime) {
+      const windowSeconds = this.preRollSeconds + Math.max(0, firstNoteTime);
+      const phase = THREE.MathUtils.clamp((t + this.preRollSeconds) / windowSeconds, 0, 1);
+      return this.ballGroundY + Math.sin(phase * Math.PI) * 2.35;
+    }
 
     let prevTime = 0;
     let nextTime = this.notes[0].time;
@@ -1894,9 +2762,29 @@ class RhythmHopGame {
     const t = this.getAudioTime();
     const z = t * this.speed;
 
+    if (this.isPlaying) {
+      if (t < -0.5) {
+        overlay.style.display = 'flex';
+        overlay.innerHTML = '<div class="game-message"><h3>READY?</h3><p>Get in position.</p></div>';
+      } else if (t < 0) {
+        overlay.style.display = 'none';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
     this.ballX = this.ballTargetX;
     const y = this.getJumpY(t);
     this.ball.position.set(this.ballX, y, z);
+    if (this.isPlaying && t < this.invulnerableUntil) {
+      this.ball.visible = Math.floor((this.invulnerableUntil - t) * 10) % 2 === 0;
+      this.ball.material.transparent = true;
+      this.ball.material.opacity = this.ball.visible ? 0.55 : 0.18;
+    } else {
+      this.ball.visible = true;
+      this.ball.material.opacity = this.ballBaseOpacity;
+      this.ball.material.transparent = false;
+    }
     this.ball.rotation.x -= dt * 7;
     this.ball.rotation.z += (this.ballTargetX - this.ballX) * dt;
 
@@ -1923,11 +2811,15 @@ class RhythmHopGame {
     this.camera.lookAt(this.ballX * 0.18, 0.3, z + 10);
 
     if (this.isPlaying) {
+      this.updateLyricsHud(this.getLyricsTime(t), t);
       this.updateJudgement(t);
       if (this.audioBuffer && t > this.audioBuffer.duration + 0.5) {
         this.stop(true);
+        this.updateLyricsHud(-1);
         overlay.innerHTML = `<div class="game-message"><h3>Track complete</h3><p>Score: ${this.score}. Combo: ${this.combo}.</p></div>`;
       }
+    } else {
+      this.updateLyricsHud(-1);
     }
     this.renderer.render(this.scene, this.camera);
   }
@@ -1940,8 +2832,8 @@ visualizerPlayBtn.addEventListener('click', () => visualizer.togglePlay());
 acceptChangesBtn.addEventListener('click', () => visualizer.acceptChanges());
 undoEditBtn.addEventListener('click', () => visualizer.undo());
 resetAllBtn.addEventListener('click', () => visualizer.resetAll());
-zoomOutBtn.addEventListener('click', () => visualizer.setZoom(0.75));
-zoomInBtn.addEventListener('click', () => visualizer.setZoom(1.333));
+visualizerZoomSlider.addEventListener('input', () => visualizer.setZoomValue(visualizerZoomSlider.value));
+flowSlider.addEventListener('input', () => visualizer.applyFlow(flowSlider.value));
 applyReductionBtn.addEventListener('click', () => visualizer.applyReduction());
 visualizerSeekSlider.addEventListener('input', () => {
   if (visualizer.syncingSlider) return;
@@ -1976,27 +2868,44 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  if (e.code !== 'Space') return;
-  e.preventDefault();
-  visualizer.togglePlay();
+  if (e.code === 'KeyC') {
+    e.preventDefault();
+    visualizer.addNoteAtCurrentTime();
+    return;
+  }
+
+  if (e.code === 'KeyX') {
+    e.preventDefault();
+    visualizer.deleteSelectedNotes();
+    return;
+  }
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    visualizer.togglePlay();
+  }
 });
 
 difficultySelect.addEventListener('change', async () => {
   const notes = state.generatedMaps[difficultySelect.value] || [];
+  const audioBlob = getPlaybackAudioBlob();
   notesStat.textContent = notes.length;
-  await visualizer.load(state.generatedAudioBlob, notes, difficultySelect.value);
-  await game.load(state.generatedAudioBlob, notes);
+  await visualizer.load(audioBlob, notes, difficultySelect.value);
+  await game.load(audioBlob, notes);
 });
 
 async function playCurrentGame() {
   const notes = state.generatedMaps[difficultySelect.value] || [];
-  if (!state.generatedAudioBlob || !notes.length) return alert('This difficulty has no playable notes.');
+  const audioBlob = getPlaybackAudioBlob();
+  if (!audioBlob || !notes.length) return alert('This difficulty has no playable notes.');
   visualizer.pause();
-  await game.load(state.generatedAudioBlob, notes);
+  await game.load(audioBlob, notes);
   await game.play();
 }
 
 gameStartBtn.addEventListener('click', playCurrentGame);
+gamePauseBtn.addEventListener('click', () => game.togglePause());
+gameRestartBtn.addEventListener('click', () => game.restart());
 </script>
 </body>
 </html>
