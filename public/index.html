@@ -116,6 +116,19 @@ input[type=text], select {
   font-size: 14px;
   outline: none;
 }
+textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #304469;
+  background: #0f3460;
+  color: #eee;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+textarea:focus { border-color: #e94560; }
 input[type=text]:focus, select:focus { border-color: #e94560; }
 button {
   border: 0;
@@ -673,17 +686,20 @@ button {
     <button class="generate-btn" id="generateBtn">Generate Beatmap</button>
     <button class="download-inline" id="downloadInlineBtn">Download ZIP</button>
 
-    <div class="local-loader">
-      <div class="local-loader-title">Convert TXT beatmap to Song.js</div>
-      <div class="local-loader-grid">
-        <label class="local-file-input">
-          <strong>TXT beatmap</strong>
-          <span id="txtConvertName">Choose .txt file</span>
-          <input type="file" id="txtConvertInput" accept=".txt,text/plain">
-        </label>
-        <button class="game-btn secondary" id="convertTxtBtn" disabled>Convert to Song.js</button>
+    <div class="local-loader" id="generateLyricsSection">
+      <label class="trainer-toggle" style="margin-bottom:12px;">
+        <input type="checkbox" id="generateLyricsCheck">
+        Generate lyrics (Whisper + forced alignment)
+      </label>
+      <div id="lyricsGenFields" style="display:none;">
+        <div class="form-group">
+          <label>Lyrics reference text</label>
+          <textarea id="lyricsReferenceText" rows="5" placeholder="Paste lyrics here for forced alignment..."></textarea>
+          <p class="game-note">Paste the known lyrics. Whisper timestamps will be aligned to these words using the audio.</p>
+        </div>
+        <button class="game-btn secondary" id="generateLyricsBtn" disabled>Generate Lyrics</button>
       </div>
-      <div class="local-status" id="txtConvertStatus">Select a TXT beatmap file (time_ms lane per line) to convert to Song.js format.</div>
+      <div class="local-status" id="generateLyricsStatus">Check the box to generate synced lyrics using the uploaded audio.</div>
     </div>
     </div>
 
@@ -965,10 +981,11 @@ const lyricsShiftInput = $('#lyricsShiftInput');
 const clearLyricsBtn = $('#clearLyricsBtn');
 const downloadAdjustedLyricsBtn = $('#downloadAdjustedLyricsBtn');
 const lyricsStatus = $('#lyricsStatus');
-const txtConvertInput = $('#txtConvertInput');
-const txtConvertName = $('#txtConvertName');
-const convertTxtBtn = $('#convertTxtBtn');
-const txtConvertStatus = $('#txtConvertStatus');
+const generateLyricsCheck = $('#generateLyricsCheck');
+const lyricsGenFields = $('#lyricsGenFields');
+const lyricsReferenceText = $('#lyricsReferenceText');
+const generateLyricsBtn = $('#generateLyricsBtn');
+const generateLyricsStatus = $('#generateLyricsStatus');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const rhythmView = $('#rhythmView');
 const visualizerView = $('#visualizerView');
@@ -1783,33 +1800,63 @@ function txtToSongJs(txtContent, fileName) {
   return { js: lines.join('\n'), count: notes.length };
 }
 
-txtConvertInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  txtConvertName.textContent = file.name;
-  convertTxtBtn.disabled = false;
-});
-
-convertTxtBtn.addEventListener('click', async () => {
-  const file = txtConvertInput.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const result = txtToSongJs(text, file.name);
-    const blob = new Blob([result.js], { type: 'application/javascript;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name.replace(/\.txt$/i, '') + '.js';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    txtConvertStatus.textContent = `Converted: ${result.count} notes → ${a.download}`;
-  } catch (err) {
-    txtConvertStatus.textContent = 'Error converting file. Make sure it uses "time_ms lane" format per line.';
+generateLyricsCheck.addEventListener('change', () => {
+  if (generateLyricsCheck.checked) {
+    lyricsGenFields.style.display = 'block';
+    generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
+    generateLyricsStatus.textContent = 'Check the box and paste reference lyrics, then click Generate Lyrics.';
+  } else {
+    lyricsGenFields.style.display = 'none';
+    generateLyricsStatus.textContent = 'Check the box to generate synced lyrics using the uploaded audio.';
   }
 });
+
+lyricsReferenceText.addEventListener('input', () => {
+  generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
+});
+
+async function generateLyricsFromReference() {
+  if (!state.file) return alert('Please select an audio file first.');
+  const referenceText = lyricsReferenceText.value.trim();
+  if (!referenceText) return alert('Please paste reference lyrics for forced alignment.');
+
+  generateLyricsBtn.disabled = true;
+  generateLyricsStatus.textContent = 'Generating lyrics with Whisper forced alignment...';
+
+  try {
+    const formData = new FormData();
+    formData.append('audio', state.file);
+    formData.append('lyrics_reference_text', referenceText);
+
+    const response = await fetch('/api/lyrics/generate', { method: 'POST', body: formData });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Lyrics generation failed');
+
+    const lyricsEntry = (payload.downloads || []).find(item => item.filename && /^lyrics_.*\.txt$/i.test(item.filename));
+    if (!lyricsEntry) throw new Error('No lyrics file returned from generator.');
+
+    const text = await fetch(lyricsEntry.url).then(r => {
+      if (!r.ok) throw new Error('Could not load lyrics file');
+      return r.text();
+    });
+
+    const lines = parseLyricsText(text);
+    state.lyricsLines = lines;
+    game.setLyrics(lines);
+    lyricsFileName.textContent = lyricsEntry.filename;
+    clearLyricsBtn.disabled = lines.length === 0;
+    downloadAdjustedLyricsBtn.disabled = lines.length === 0;
+    generateLyricsStatus.textContent = lines.length
+      ? `Lyrics generated: ${lines.length} phrase line(s).`
+      : 'Lyrics file returned but no valid rows found.';
+  } catch (err) {
+    generateLyricsStatus.textContent = err.message || 'Lyrics generation failed';
+  } finally {
+    generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
+  }
+}
+
+generateLyricsBtn.addEventListener('click', generateLyricsFromReference);
 
 class BeatmapVisualizer {
   constructor(canvas) {

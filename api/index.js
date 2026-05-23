@@ -7,6 +7,7 @@ const fs = require('fs');
 const app = express();
 const BEATSAGE = 'https://beatsage.com';
 const LIBROSA_SPACE = process.env.LIBROSA_SPACE || 'https://andvari3d-beatmaker.hf.space';
+const LYRICS_SPACE = process.env.LYRICS_SPACE || 'https://andvari3d-beatmakerv3.hf.space';
 const DIFFICULTIES = ['ExpertPlus', 'Expert', 'Hard', 'Normal', 'Easy'];
 
 app.use(express.json());
@@ -120,6 +121,95 @@ app.get('/api/librosa/file', async (req, res) => {
   } catch (err) {
     console.error('Librosa file proxy error:', err);
     res.status(500).json({ error: 'Librosa file proxy failed' });
+  }
+});
+
+function normalizeLyricsDownloadUrl(rawUrl) {
+  const url = new URL(rawUrl, LYRICS_SPACE);
+  return `/api/lyrics/file?path=${encodeURIComponent(url.pathname)}`;
+}
+
+// POST /api/lyrics/generate - Generate lyrics via Whisper forced alignment
+app.post('/api/lyrics/generate', async (req, res) => {
+  const form = new formidable.IncomingForm({
+    maxFileSize: 80 * 1024 * 1024,
+    keepExtensions: true,
+  });
+
+  let files;
+
+  try {
+    const parsed = await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, parsedFiles) => {
+        if (err) reject(err);
+        else resolve([fields, parsedFiles]);
+      });
+    });
+
+    const [fields, parsedFiles] = parsed;
+    files = parsedFiles;
+    const audio = getFirstFile(files.audio);
+    if (!audio) {
+      return res.status(400).json({ error: 'Missing audio file' });
+    }
+
+    const body = new FormData();
+    const filePath = audio.filepath || audio.path || '';
+    const fileName = audio.originalFilename || audio.name || 'audio.mp3';
+    body.append('audio', fs.createReadStream(filePath), fileName);
+    body.append('generation_mode', 'lyrics_only');
+    body.append('lyrics_reference_text', getFirstField(fields, 'lyrics_reference_text', ''));
+    body.append('lyrics_shift_ms', getFirstField(fields, 'lyrics_shift_ms', '0'));
+    body.append('whisper_model', getFirstField(fields, 'whisper_model', 'small.en'));
+    body.append('whisper_language', getFirstField(fields, 'whisper_language', 'en'));
+
+    const response = await fetch(`${LYRICS_SPACE}/api/process`, {
+      method: 'POST',
+      body,
+      headers: body.getHeaders(),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: payload.error || 'Lyrics generation failed' });
+    }
+
+    payload.downloads = (payload.downloads || []).map(item => ({
+      ...item,
+      url: normalizeLyricsDownloadUrl(item.url),
+    }));
+    res.json(payload);
+  } catch (err) {
+    console.error('Lyrics generate error:', err);
+    res.status(500).json({ error: 'Lyrics generation failed' });
+  } finally {
+    const audio = getFirstFile(files?.audio);
+    const filePath = audio?.filepath || audio?.path;
+    if (filePath) fs.unlink(filePath, () => {});
+  }
+});
+
+// GET /api/lyrics/file?path=/api/download/... - Proxy lyrics files from HF Space
+app.get('/api/lyrics/file', async (req, res) => {
+  try {
+    const filePath = String(req.query.path || '');
+    if (!filePath.startsWith('/api/download/')) {
+      return res.status(400).json({ error: 'Invalid lyrics file path' });
+    }
+
+    const response = await fetch(`${LYRICS_SPACE}${filePath}`);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Lyrics file not available' });
+    }
+
+    const buffer = await response.buffer();
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+    const disposition = response.headers.get('content-disposition');
+    if (disposition) res.setHeader('Content-Disposition', disposition);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Lyrics file proxy error:', err);
+    res.status(500).json({ error: 'Lyrics file proxy failed' });
   }
 });
 
