@@ -457,6 +457,22 @@ button {
   margin-bottom: 12px;
 }
 .visualizer-toolbar .game-btn { margin-top: 0; }
+.visualizer-play-controls {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 8px;
+}
+.visualizer-icon-btn {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #0f3460;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.visualizer-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
 .zoom-controls {
   display: grid;
   grid-template-columns: 1fr;
@@ -522,7 +538,15 @@ button {
   width: 100%;
   padding: 10px 12px;
 }
+.visualizer-time-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-column: 1 / -1;
+}
 .visualizer-time {
+  min-width: 190px;
+  white-space: nowrap;
   padding: 12px 14px;
   border-radius: 11px;
   background: rgba(10, 20, 44, 0.86);
@@ -530,6 +554,12 @@ button {
   color: #dbe4ff;
   font-weight: 800;
   text-align: center;
+}
+.visualizer-time-row .game-btn {
+  margin: 0 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+  padding: 12px 22px;
 }
 .visualizer-note-total {
   margin-bottom: 10px;
@@ -550,6 +580,8 @@ button {
 .visualizer-wrap {
   position: relative;
   height: 800px;
+  min-height: 360px;
+  max-height: 1200px;
   overflow: hidden;
   border-radius: 16px;
   background: linear-gradient(180deg, #090c18, #131a34 55%, #080a12);
@@ -569,12 +601,38 @@ button {
 }
 #visualizerCanvas {
   width: 100%;
-  height: 800px;
+  height: 100%;
   display: block;
   cursor: grab;
   touch-action: none;
 }
 #visualizerCanvas.dragging { cursor: grabbing; }
+.visualizer-resize-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26px;
+  z-index: 12;
+  cursor: ns-resize;
+  touch-action: none;
+  background: linear-gradient(180deg, rgba(100,232,255,0), rgba(100,232,255,.18));
+  border-top: 1px solid rgba(100,232,255,.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(219,244,255,.8);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  user-select: none;
+}
+.visualizer-resize-zone::before { content: '↕ RESIZE'; }
+.visualizer-resize-zone:hover,
+.visualizer-resize-zone.dragging {
+  background: linear-gradient(180deg, rgba(100,232,255,.08), rgba(100,232,255,.32));
+  color: #fff;
+}
 .visualizer-empty {
   position: absolute;
   inset: 0;
@@ -686,21 +744,7 @@ button {
     <button class="generate-btn" id="generateBtn">Generate Beatmap</button>
     <button class="download-inline" id="downloadInlineBtn">Download ZIP</button>
 
-    <div class="local-loader" id="generateLyricsSection">
-      <label class="trainer-toggle" style="margin-bottom:12px;">
-        <input type="checkbox" id="generateLyricsCheck">
-        Generate lyrics (Whisper + forced alignment)
-      </label>
-      <div id="lyricsGenFields" style="display:none;">
-        <div class="form-group">
-          <label>Lyrics reference text</label>
-          <textarea id="lyricsReferenceText" rows="5" placeholder="Paste lyrics here for forced alignment..."></textarea>
-          <p class="game-note">Paste the known lyrics. Whisper timestamps will be aligned to these words using the audio.</p>
-        </div>
-        <button class="game-btn secondary" id="generateLyricsBtn" disabled>Generate Lyrics</button>
-      </div>
-      <div class="local-status" id="generateLyricsStatus">Check the box to generate synced lyrics using the uploaded audio.</div>
-    </div>
+
     </div>
 
     <div class="generator-view" id="librosaGeneratorView">
@@ -796,11 +840,13 @@ button {
 
     <div class="panel-view visualizer-view" id="visualizerView">
       <div class="visualizer-toolbar">
-        <button class="game-btn secondary" id="visualizerPlayBtn" disabled>Play visualizer</button>
+        <div class="visualizer-play-controls">
+          <button class="visualizer-icon-btn" id="visualizerRestartBtn" type="button" title="Back to start" disabled>&#x23EE;</button>
+          <button class="visualizer-icon-btn" id="visualizerPlayBtn" type="button" title="Play" disabled>&#x25B6;</button>
+        </div>
         <button class="game-btn secondary" id="acceptChangesBtn" disabled>Save</button>
         <button class="game-btn secondary" id="undoEditBtn" disabled>Undo</button>
         <button class="game-btn secondary" id="resetAllBtn" disabled>Reset all</button>
-        <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download current beatmap</button>
         <label class="edit-step-control">Step ms
           <input type="text" id="editStepInput" value="10" inputmode="numeric">
         </label>
@@ -822,13 +868,17 @@ button {
           </label>
           <button id="applyReductionBtn" type="button" disabled>Apply</button>
         </div>
-        <div class="visualizer-time" id="visualizerTime">00:00 / 00:00</div>
+        <div class="visualizer-time-row">
+          <div class="visualizer-time" id="visualizerTime">00:00 / 00:00</div>
+          <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download current beatmap</button>
+        </div>
       </div>
       <div class="visualizer-note-total" id="visualizerNoteTotal">Total notes: 0</div>
       <div class="visualizer-edit-status" id="visualizerEditStatus">Click a note to select it. Shift-click another note to select the full range. Use left/right to change lane and up/down to move time.</div>
       <div class="visualizer-wrap" id="visualizerWrap">
         <canvas id="visualizerCanvas"></canvas>
         <input class="visualizer-seek-slider" id="visualizerSeekSlider" type="range" min="0" max="0" step="0.01" value="0" disabled>
+        <div class="visualizer-resize-zone" id="visualizerResizeZone" title="Drag vertically to resize visualizer height"></div>
         <div class="visualizer-empty" id="visualizerEmpty">Load a generated or local song to inspect the full beatmap. Drag vertically to move through time, click to seek, and press Space to play/pause.</div>
       </div>
       <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes affect the game and downloaded ZIP only after Save.</p>
@@ -958,6 +1008,13 @@ const trainerToggle = $('#trainerToggle');
 const downloadInlineBtn = $('#downloadInlineBtn');
 const overlay = $('#gameOverlay');
 const lyricsHud = $('#lyricsHud');
+const lyricsFileInput = $('#lyricsFileInput');
+const lyricsFileName = $('#lyricsFileName');
+const lyricsShiftSlider = $('#lyricsShiftSlider');
+const lyricsShiftInput = $('#lyricsShiftInput');
+const clearLyricsBtn = $('#clearLyricsBtn');
+const downloadAdjustedLyricsBtn = $('#downloadAdjustedLyricsBtn');
+const lyricsStatus = $('#lyricsStatus');
 const gameWrap = $('#gameWrap');
 const heartHud = $('#heartHud');
 const damageFlash = $('#damageFlash');
@@ -974,22 +1031,15 @@ const overrideAudioInput = $('#overrideAudioInput');
 const overrideAudioName = $('#overrideAudioName');
 const clearOverrideAudioBtn = $('#clearOverrideAudioBtn');
 const overrideAudioStatus = $('#overrideAudioStatus');
-const lyricsFileInput = $('#lyricsFileInput');
-const lyricsFileName = $('#lyricsFileName');
-const lyricsShiftSlider = $('#lyricsShiftSlider');
-const lyricsShiftInput = $('#lyricsShiftInput');
-const clearLyricsBtn = $('#clearLyricsBtn');
-const downloadAdjustedLyricsBtn = $('#downloadAdjustedLyricsBtn');
-const lyricsStatus = $('#lyricsStatus');
-const generateLyricsCheck = $('#generateLyricsCheck');
-const lyricsGenFields = $('#lyricsGenFields');
-const lyricsReferenceText = $('#lyricsReferenceText');
-const generateLyricsBtn = $('#generateLyricsBtn');
-const generateLyricsStatus = $('#generateLyricsStatus');
+
 const tabButtons = document.querySelectorAll('.tab-btn');
 const rhythmView = $('#rhythmView');
 const visualizerView = $('#visualizerView');
+const visualizerWrap = $('#visualizerWrap');
 const visualizerCanvas = $('#visualizerCanvas');
+const visualizerResizeHandle = $('#visualizerResizeHandle');
+const visualizerResizeZone = $('#visualizerResizeZone');
+const visualizerRestartBtn = $('#visualizerRestartBtn');
 const visualizerPlayBtn = $('#visualizerPlayBtn');
 const acceptChangesBtn = $('#acceptChangesBtn');
 const undoEditBtn = $('#undoEditBtn');
@@ -1764,6 +1814,7 @@ clearLyricsBtn.addEventListener('click', () => {
   game.setLyrics([]);
 });
 
+
 async function tryLoadLocalSong() {
   if (!localAudioBlob || !localBeatmapText) {
     localLoadStatus.textContent = 'Load both the audio file and its beatmap file (Song.js or .txt).';
@@ -1800,63 +1851,6 @@ function txtToSongJs(txtContent, fileName) {
   return { js: lines.join('\n'), count: notes.length };
 }
 
-generateLyricsCheck.addEventListener('change', () => {
-  if (generateLyricsCheck.checked) {
-    lyricsGenFields.style.display = 'block';
-    generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
-    generateLyricsStatus.textContent = 'Check the box and paste reference lyrics, then click Generate Lyrics.';
-  } else {
-    lyricsGenFields.style.display = 'none';
-    generateLyricsStatus.textContent = 'Check the box to generate synced lyrics using the uploaded audio.';
-  }
-});
-
-lyricsReferenceText.addEventListener('input', () => {
-  generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
-});
-
-async function generateLyricsFromReference() {
-  if (!state.file) return alert('Please select an audio file first.');
-  const referenceText = lyricsReferenceText.value.trim();
-  if (!referenceText) return alert('Please paste reference lyrics for forced alignment.');
-
-  generateLyricsBtn.disabled = true;
-  generateLyricsStatus.textContent = 'Generating lyrics with Whisper forced alignment...';
-
-  try {
-    const formData = new FormData();
-    formData.append('audio', state.file);
-    formData.append('lyrics_reference_text', referenceText);
-
-    const response = await fetch('/api/lyrics/generate', { method: 'POST', body: formData });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || 'Lyrics generation failed');
-
-    const lyricsEntry = (payload.downloads || []).find(item => item.filename && /^lyrics_.*\.txt$/i.test(item.filename));
-    if (!lyricsEntry) throw new Error('No lyrics file returned from generator.');
-
-    const text = await fetch(lyricsEntry.url).then(r => {
-      if (!r.ok) throw new Error('Could not load lyrics file');
-      return r.text();
-    });
-
-    const lines = parseLyricsText(text);
-    state.lyricsLines = lines;
-    game.setLyrics(lines);
-    lyricsFileName.textContent = lyricsEntry.filename;
-    clearLyricsBtn.disabled = lines.length === 0;
-    downloadAdjustedLyricsBtn.disabled = lines.length === 0;
-    generateLyricsStatus.textContent = lines.length
-      ? `Lyrics generated: ${lines.length} phrase line(s).`
-      : 'Lyrics file returned but no valid rows found.';
-  } catch (err) {
-    generateLyricsStatus.textContent = err.message || 'Lyrics generation failed';
-  } finally {
-    generateLyricsBtn.disabled = !state.file || !lyricsReferenceText.value.trim();
-  }
-}
-
-generateLyricsBtn.addEventListener('click', generateLyricsFromReference);
 
 class BeatmapVisualizer {
   constructor(canvas) {
@@ -1867,6 +1861,7 @@ class BeatmapVisualizer {
     this.source = null;
     this.notes = [];
     this.duration = 0;
+    this.canvasHeight = 800;
     this.viewTime = 0;
     this.startOffset = 0;
     this.startContextTime = 0;
@@ -1884,6 +1879,7 @@ class BeatmapVisualizer {
     this.lastSelectedIndex = -1;
     this.dirty = false;
     this.undoStack = [];
+    this.redoStack = [];
     this.syncingSlider = false;
 
     this.bindInput();
@@ -1947,11 +1943,14 @@ class BeatmapVisualizer {
     this.lastSelectedIndex = -1;
     this.dirty = false;
     this.undoStack = [];
+    this.redoStack = [];
     this.duration = Math.max(this.audioBuffer.duration, this.notes.length ? this.notes[this.notes.length - 1].time : 0);
     this.viewTime = 0;
     this.startOffset = 0;
     visualizerPlayBtn.disabled = false;
-    visualizerPlayBtn.textContent = 'Play visualizer';
+    visualizerPlayBtn.textContent = '▶';
+    visualizerPlayBtn.title = 'Play';
+    visualizerRestartBtn.disabled = false;
     acceptChangesBtn.disabled = true;
     undoEditBtn.disabled = true;
     resetAllBtn.disabled = false;
@@ -2017,6 +2016,10 @@ class BeatmapVisualizer {
     this.draw();
   }
 
+  hasSelection() {
+    return this.selectedIndices.size > 0;
+  }
+
   setZoom(multiplier) {
     const before = this.getTime();
     this.pixelsPerSecond = Math.max(8, Math.min(180, this.pixelsPerSecond * multiplier));
@@ -2053,6 +2056,7 @@ class BeatmapVisualizer {
   captureUndo() {
     this.undoStack.push(cloneNotes(this.notes));
     if (this.undoStack.length > 10) this.undoStack.shift();
+    this.redoStack = [];
     undoEditBtn.disabled = false;
   }
 
@@ -2143,7 +2147,6 @@ class BeatmapVisualizer {
     }
     this.dirty = true;
     acceptChangesBtn.disabled = false;
-    this.viewTime = this.notes[this.selectedIndex]?.time || this.viewTime;
     this.updateEditStatus();
     this.draw();
   }
@@ -2151,13 +2154,24 @@ class BeatmapVisualizer {
   undo() {
     const previous = this.undoStack.pop();
     if (!previous) return;
+    this.redoStack.push(cloneNotes(this.notes));
+    if (this.redoStack.length > 10) this.redoStack.shift();
     this.restoreNotes(previous, true);
+  }
+
+  redo() {
+    const next = this.redoStack.pop();
+    if (!next) return;
+    this.undoStack.push(cloneNotes(this.notes));
+    if (this.undoStack.length > 10) this.undoStack.shift();
+    this.restoreNotes(next, true);
   }
 
   resetAll() {
     const original = state.originalMaps[this.mapName];
     if (!original) return;
     this.undoStack = [];
+    this.redoStack = [];
     this.restoreNotes(original, false);
     state.generatedMaps[this.mapName] = cloneNotes(original);
     notesStat.textContent = original.length;
@@ -2179,6 +2193,7 @@ class BeatmapVisualizer {
     this.lastSelectedIndex = -1;
     this.dirty = false;
     this.undoStack = [];
+    this.redoStack = [];
     acceptChangesBtn.disabled = true;
     undoEditBtn.disabled = true;
     applyReductionBtn.disabled = accepted.length <= 2;
@@ -2220,7 +2235,9 @@ class BeatmapVisualizer {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(devicePixelRatio || 1, 2);
     this.canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    this.canvas.height = Math.round(800 * dpr);
+    this.canvasHeight = Math.max(1, rect.height || 800);
+    this.canvas.height = Math.round(this.canvasHeight * dpr);
+    this.lineY = Math.max(120, this.canvasHeight - 90);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.draw();
   }
@@ -2236,6 +2253,10 @@ class BeatmapVisualizer {
     this.updateSlider();
     this.draw();
     if (autoplay) this.play();
+  }
+
+  seekRelative(deltaSeconds) {
+    this.seekTo(this.getTime() + deltaSeconds, this.isPlaying);
   }
 
   updateSlider() {
@@ -2307,6 +2328,18 @@ class BeatmapVisualizer {
     else await this.play();
   }
 
+  returnToStart() {
+    if (!this.audioBuffer) return;
+    this.stopSource();
+    this.isPlaying = false;
+    this.viewTime = 0;
+    this.startOffset = 0;
+    visualizerPlayBtn.textContent = '▶';
+    visualizerPlayBtn.title = 'Play';
+    this.updateSlider();
+    this.draw();
+  }
+
   async play() {
     if (!this.audioBuffer) return;
     if (typeof game !== 'undefined') game.stop(false);
@@ -2319,7 +2352,8 @@ class BeatmapVisualizer {
     this.startContextTime = this.audioContext.currentTime;
     this.source.start(0, this.startOffset);
     this.isPlaying = true;
-    visualizerPlayBtn.textContent = 'Pause visualizer';
+    visualizerPlayBtn.textContent = '⏸';
+    visualizerPlayBtn.title = 'Pause';
     const source = this.source;
     this.source.onended = () => {
       if (this.source !== source) return;
@@ -2334,7 +2368,8 @@ class BeatmapVisualizer {
     if (updateTime) this.viewTime = this.getTime();
     this.stopSource();
     this.isPlaying = false;
-    visualizerPlayBtn.textContent = 'Play visualizer';
+    visualizerPlayBtn.textContent = '▶';
+    visualizerPlayBtn.title = 'Play';
     this.draw();
   }
 
@@ -2354,7 +2389,7 @@ class BeatmapVisualizer {
 
   draw() {
     const { width, laneLeft, laneRight, laneWidth } = this.getLayout();
-    const height = 800;
+    const height = this.canvasHeight || 800;
     const ctx = this.ctx;
     const currentTime = this.getTime();
     if (this.isPlaying) this.viewTime = currentTime;
@@ -2875,6 +2910,37 @@ class RhythmHopGame {
 const visualizer = new BeatmapVisualizer(visualizerCanvas);
 const game = new RhythmHopGame($('#gameCanvas'));
 
+function startVisualizerResize(e) {
+  const startY = e.clientY;
+  const startHeight = visualizerWrap.getBoundingClientRect().height;
+  const target = e.currentTarget;
+  target.classList.add('dragging');
+  target.setPointerCapture(e.pointerId);
+
+  const onMove = moveEvent => {
+    const nextHeight = Math.max(360, Math.min(1200, startHeight + moveEvent.clientY - startY));
+    visualizerWrap.style.height = `${Math.round(nextHeight)}px`;
+    visualizer.resize();
+    moveEvent.preventDefault();
+  };
+
+  const onUp = upEvent => {
+    target.classList.remove('dragging');
+    target.releasePointerCapture(upEvent.pointerId);
+    target.removeEventListener('pointermove', onMove);
+    target.removeEventListener('pointerup', onUp);
+    target.removeEventListener('pointercancel', onUp);
+  };
+
+  target.addEventListener('pointermove', onMove);
+  target.addEventListener('pointerup', onUp);
+  target.addEventListener('pointercancel', onUp);
+  e.preventDefault();
+}
+
+visualizerResizeZone.addEventListener('pointerdown', startVisualizerResize);
+
+visualizerRestartBtn.addEventListener('click', () => visualizer.returnToStart());
 visualizerPlayBtn.addEventListener('click', () => visualizer.togglePlay());
 acceptChangesBtn.addEventListener('click', () => visualizer.acceptChanges());
 undoEditBtn.addEventListener('click', () => visualizer.undo());
@@ -2889,31 +2955,75 @@ visualizerSeekSlider.addEventListener('input', () => {
 
 document.addEventListener('keydown', e => {
   const tag = e.target?.tagName?.toLowerCase();
-  if (activeTab !== 'visualizer' || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  const isTextTarget = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if (activeTab !== 'visualizer') return;
+
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+    e.preventDefault();
+    if (e.shiftKey) visualizer.redo();
+    else visualizer.undo();
+    return;
+  }
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    visualizer.togglePlay();
+    return;
+  }
+
+  if (e.shiftKey && e.code === 'ArrowLeft') {
+    e.preventDefault();
+    visualizer.seekRelative(-0.5);
+    return;
+  }
+
+  if (e.shiftKey && e.code === 'ArrowRight') {
+    e.preventDefault();
+    visualizer.seekRelative(0.5);
+    return;
+  }
+
+  if (e.code === 'BracketLeft') {
+    e.preventDefault();
+    visualizer.setZoom(0.95);
+    return;
+  }
+
+  if (e.code === 'BracketRight') {
+    e.preventDefault();
+    visualizer.setZoom(1.05);
+    return;
+  }
 
   if (e.code === 'ArrowLeft') {
+    if (!visualizer.hasSelection()) return;
     e.preventDefault();
     visualizer.moveSelectedNote(-1, 0);
     return;
   }
 
   if (e.code === 'ArrowRight') {
+    if (!visualizer.hasSelection()) return;
     e.preventDefault();
     visualizer.moveSelectedNote(1, 0);
     return;
   }
 
   if (e.code === 'ArrowUp') {
+    if (!visualizer.hasSelection()) return;
     e.preventDefault();
-    visualizer.moveSelectedNote(0, visualizer.getEditStepSeconds());
+    visualizer.moveSelectedNote(0, e.shiftKey ? 0.05 : visualizer.getEditStepSeconds());
     return;
   }
 
   if (e.code === 'ArrowDown') {
+    if (!visualizer.hasSelection()) return;
     e.preventDefault();
-    visualizer.moveSelectedNote(0, -visualizer.getEditStepSeconds());
+    visualizer.moveSelectedNote(0, e.shiftKey ? -0.05 : -visualizer.getEditStepSeconds());
     return;
   }
+
+  if (isTextTarget) return;
 
   if (e.code === 'KeyC') {
     e.preventDefault();
@@ -2925,11 +3035,6 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     visualizer.deleteSelectedNotes();
     return;
-  }
-
-  if (e.code === 'Space') {
-    e.preventDefault();
-    visualizer.togglePlay();
   }
 });
 
