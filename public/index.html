@@ -466,12 +466,22 @@ button {
 .game-message p { color: #aab5d4; font-size: 13px; line-height: 1.45; }
 .visualizer-toolbar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
-  align-items: center;
   margin-bottom: 12px;
 }
 .visualizer-toolbar .game-btn { margin-top: 0; }
+.visualizer-main-controls {
+  display: grid;
+  grid-template-columns: minmax(104px, 160px) repeat(3, minmax(92px, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+.visualizer-edit-row {
+  display: grid;
+  grid-template-columns: minmax(77px, .55fr) minmax(77px, .55fr) 1fr;
+  gap: 12px;
+  align-items: end;
+}
 .visualizer-play-controls {
   display: grid;
   grid-template-columns: 48px 1fr;
@@ -515,31 +525,36 @@ button {
 }
 .note-reduction-control {
   display: grid;
-  grid-template-columns: minmax(68px, 1fr) minmax(70px, .8fr) minmax(68px, 1fr) minmax(70px, .8fr);
+  grid-template-columns: repeat(2, 72px 64px) 72px 72px 64px;
   gap: 6px;
   align-items: end;
-  grid-column: span 2;
+  justify-self: end;
 }
 .note-reduction-control label {
   display: grid;
   gap: 5px;
+  min-width: 0;
   color: #9ea7c2;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .note-reduction-control input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 4px;
 }
 .note-reduction-control button {
-  padding: 11px 10px;
+  padding: 11px 8px;
   border-radius: 10px;
   background: #0f3460;
   color: #fff;
   font-weight: 900;
   cursor: pointer;
+  min-width: 54px;
 }
 .edit-step-control {
   display: grid;
@@ -595,6 +610,19 @@ button {
   white-space: nowrap;
   padding: 12px 22px;
 }
+.include-gems-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: #aab5d4;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .45px;
+  white-space: nowrap;
+}
+.include-gems-toggle input { accent-color: #64e8ff; }
 .visualizer-note-total {
   margin-bottom: 10px;
   padding: 10px 12px;
@@ -697,7 +725,9 @@ button {
 }
 @media (max-width: 620px) {
   .container, .game-panel { padding: 22px; }
-  .game-topbar, .game-statbar, .local-loader-grid, .visualizer-toolbar { grid-template-columns: 1fr 1fr; }
+  .game-topbar, .game-statbar, .local-loader-grid { grid-template-columns: 1fr 1fr; }
+  .visualizer-main-controls, .visualizer-edit-row { grid-template-columns: 1fr; }
+  .note-reduction-control { grid-template-columns: repeat(2, 36px auto); }
   .game-canvas-wrap { min-height: 460px; }
 }
 </style>
@@ -877,43 +907,52 @@ button {
 
     <div class="panel-view visualizer-view" id="visualizerView">
       <div class="visualizer-toolbar">
-        <div class="visualizer-play-controls">
-          <button class="visualizer-icon-btn" id="visualizerRestartBtn" type="button" title="Back to start" disabled>&#x23EE;</button>
-          <button class="visualizer-icon-btn" id="visualizerPlayBtn" type="button" title="Play" disabled>&#x25B6;</button>
+        <div class="visualizer-main-controls">
+          <div class="visualizer-play-controls">
+            <button class="visualizer-icon-btn" id="visualizerRestartBtn" type="button" title="Back to start" disabled>&#x23EE;</button>
+            <button class="visualizer-icon-btn" id="visualizerPlayBtn" type="button" title="Play" disabled>&#x25B6;</button>
+          </div>
+          <button class="game-btn secondary" id="acceptChangesBtn" disabled>Save</button>
+          <button class="game-btn secondary" id="undoEditBtn" disabled>Undo</button>
+          <button class="game-btn secondary" id="resetAllBtn" disabled>Reset all</button>
         </div>
-        <button class="game-btn secondary" id="acceptChangesBtn" disabled>Save</button>
-        <button class="game-btn secondary" id="undoEditBtn" disabled>Undo</button>
-        <button class="game-btn secondary" id="resetAllBtn" disabled>Reset all</button>
-        <label class="edit-step-control">Step ms
-          <input type="text" id="editStepInput" value="10" inputmode="numeric">
-        </label>
-        <div class="zoom-controls">
-          <label>Zoom
-            <input id="visualizerZoomSlider" type="range" min="8" max="180" step="1" value="38">
-          </label>
-          <span id="zoomLabel">Zoom 38 px/s</span>
-        </div>
-        <div class="zoom-controls">
-          <label>Flow
-            <input id="flowSlider" type="range" min="0" max="100" step="10" value="0">
-          </label>
-          <span id="flowLabel">Flow 0%</span>
-        </div>
-        <div class="note-reduction-control">
-          <label>Reduce %
-            <input type="text" id="noteReductionInput" value="10" inputmode="numeric">
-          </label>
-          <button id="applyReductionBtn" type="button" disabled>Apply</button>
-          <label>Clean ms
-            <input type="text" id="cleanThresholdInput" value="10" inputmode="numeric">
-          </label>
-          <button id="cleanNotesBtn" type="button" disabled>Clean</button>
+        <div class="visualizer-edit-row">
+          <div class="zoom-controls">
+            <label>Zoom
+              <input id="visualizerZoomSlider" type="range" min="8" max="180" step="1" value="38">
+            </label>
+            <span id="zoomLabel">38 px/s</span>
+          </div>
+          <div class="zoom-controls">
+            <label>Flow
+              <input id="flowSlider" type="range" min="0" max="100" step="10" value="0">
+            </label>
+            <span id="flowLabel">Flow 0%</span>
+          </div>
+          <div class="note-reduction-control">
+            <label>Reduce %
+              <input type="text" id="noteReductionInput" value="10" inputmode="numeric">
+            </label>
+            <button id="applyReductionBtn" type="button" disabled>Apply</button>
+            <label>Clean ms
+              <input type="text" id="cleanThresholdInput" value="10" inputmode="numeric">
+            </label>
+            <button id="cleanNotesBtn" type="button" disabled>Clean</button>
+            <label>Gems
+              <input type="text" id="batchGemCountInput" value="4" inputmode="numeric">
+            </label>
+            <label>Sep ms
+              <input type="text" id="batchGemSpacingInput" value="250" inputmode="numeric">
+            </label>
+            <button id="addBatchGemsBtn" type="button" disabled>Add</button>
+          </div>
         </div>
         <div class="visualizer-time-row">
           <input class="visualizer-time" id="visualizerTime" type="text" value="0" inputmode="numeric" title="Current time in milliseconds">
           <div class="visualizer-total-time" id="visualizerTotalTime">/ 00:00</div>
           <div class="visualizer-selected-count" id="visualizerSelectedCount">Selected: 0</div>
-          <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download current beatmap</button>
+          <label class="include-gems-toggle"><input type="checkbox" id="includeGemsCheckbox"> Include gems</label>
+          <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download beatmap</button>
         </div>
       </div>
       <div class="visualizer-note-total" id="visualizerNoteTotal">Total notes: 0</div>
@@ -1025,6 +1064,7 @@ function normalizeNoteClipboard(value) {
     .map(note => ({
       offset: Number(note.offset),
       lane: Math.max(1, Math.min(5, Math.round(Number(note.lane)))),
+      type: note.type || 'note',
     }))
     .filter(note => Number.isFinite(note.offset) && Number.isFinite(note.lane));
   if (!notes.length) return null;
@@ -1155,6 +1195,10 @@ const noteReductionInput = $('#noteReductionInput');
 const applyReductionBtn = $('#applyReductionBtn');
 const cleanThresholdInput = $('#cleanThresholdInput');
 const cleanNotesBtn = $('#cleanNotesBtn');
+const batchGemCountInput = $('#batchGemCountInput');
+const batchGemSpacingInput = $('#batchGemSpacingInput');
+const addBatchGemsBtn = $('#addBatchGemsBtn');
+const includeGemsCheckbox = $('#includeGemsCheckbox');
 const visualizerSeekSlider = $('#visualizerSeekSlider');
 const visualizerTime = $('#visualizerTime');
 const visualizerTotalTime = $('#visualizerTotalTime');
@@ -1446,7 +1490,7 @@ function getDownloadName() {
   return `BeatSync_${title || 'Song'}_SongJS.zip`;
 }
 
-function buildSongJs(mapName, fileName, notes) {
+function buildSongJs(mapName, fileName, notes, includeGems = false) {
   const indexMatch = fileName.match(/^Song(\d+)_/i);
   const songIndex = indexMatch ? Number(indexMatch[1]) : 1;
   const varName = `Song${songIndex}_array`;
@@ -1459,11 +1503,13 @@ function buildSongJs(mapName, fileName, notes) {
 
   notes
     .slice()
+    .filter(note => includeGems || note.type !== 'gem')
     .sort((a, b) => a.time - b.time)
     .forEach((note, i) => {
       const time = parseFloat(note.time.toFixed(4));
       const lane = Math.max(1, Math.min(5, Math.round(note.lane)));
-      lines.push(`    ${varName}[${i}]= [${time},${lane},0];`);
+      const flag = note.type === 'gem' ? 1 : 0;
+      lines.push(`    ${varName}[${i}]= [${time},${lane},${flag}];`);
     });
 
   return lines.join('\n');
@@ -1472,12 +1518,13 @@ function buildSongJs(mapName, fileName, notes) {
 async function buildDownloadBlob() {
   if (!state.generatedZipBlob) throw new Error('No generated ZIP is available yet.');
   if (visualizer.dirty) throw new Error('Save visualizer changes before downloading the ZIP.');
+  const includeGems = includeGemsCheckbox.checked;
 
   const zip = await JSZip.loadAsync(state.generatedZipBlob);
   for (const [mapName, fileName] of Object.entries(state.generatedMapFiles)) {
     const notes = state.generatedMaps[mapName];
     if (!notes) continue;
-    zip.file(fileName, buildSongJs(mapName, fileName, notes));
+    zip.file(fileName, buildSongJs(mapName, fileName, notes, includeGems));
   }
 
   return zip.generateAsync({ type: 'blob' });
@@ -1517,7 +1564,7 @@ function downloadCurrentBeatmap() {
     if (!visualizer.mapName || !visualizer.notes.length) throw new Error('No beatmap is loaded in the visualizer.');
     const fallbackFile = `Song1_${visualizer.mapName.replace(/[^a-zA-Z0-9_-]/g, '_')}.js`;
     const fileName = state.generatedMapFiles[visualizer.mapName] || fallbackFile;
-    const js = buildSongJs(visualizer.mapName, fileName, visualizer.notes);
+    const js = buildSongJs(visualizer.mapName, fileName, visualizer.notes, includeGemsCheckbox.checked);
     triggerNamedDownload(new Blob([js], { type: 'application/javascript;charset=utf-8' }), fileName);
   } catch (err) {
     alert(err.message || 'Could not download current beatmap');
@@ -1641,13 +1688,13 @@ function parseSongJs(source) {
     const time = rawTime > 1000 ? rawTime / 1000 : rawTime;
     const lane = Math.max(1, Math.min(5, Number(match[2])));
     const flag = Number(match[3]);
-    if (flag === 0) notes.push({ time, lane, judged: false, mesh: null });
+    if (flag === 0 || flag === 1) notes.push({ time, lane, type: flag === 1 ? 'gem' : 'note', judged: false, mesh: null });
   }
   return notes.sort((a, b) => a.time - b.time);
 }
 
 function cloneNotes(notes) {
-  return notes.map(note => ({ time: note.time, lane: note.lane, judged: false, mesh: null }));
+  return notes.map(note => ({ time: note.time, lane: note.lane, type: note.type || 'note', judged: false, mesh: null }));
 }
 
 function blurActiveControl() {
@@ -1990,6 +2037,7 @@ class BeatmapVisualizer {
     this.dragStartTime = 0;
     this.dragDistance = 0;
     this.wasPlayingOnPointer = false;
+    this.pointerStartButton = 0;
     this.mapName = '';
     this.selectedIndex = -1;
     this.selectedIndices = new Set();
@@ -2016,6 +2064,7 @@ class BeatmapVisualizer {
       this.dragStartTime = this.viewTime;
       this.dragDistance = 0;
       this.wasPlayingOnPointer = this.isPlaying;
+      this.pointerStartButton = e.button;
       if (this.isPlaying) this.pause();
       this.canvas.classList.add('dragging');
       this.canvas.setPointerCapture(e.pointerId);
@@ -2043,6 +2092,10 @@ class BeatmapVisualizer {
           this.selectNote(noteIndex, e.shiftKey);
         } else {
           const time = this.viewTime + (this.lineY - y) / this.pixelsPerSecond;
+          if (this.pointerStartButton === 0) {
+            this.clearSelection();
+            this.updateEditStatus();
+          }
           this.seekTo(time, this.wasPlayingOnPointer);
         }
       } else if (this.wasPlayingOnPointer) {
@@ -2085,6 +2138,7 @@ class BeatmapVisualizer {
     downloadCurrentMapBtn.disabled = this.notes.length === 0;
     applyReductionBtn.disabled = this.notes.length <= 2;
     cleanNotesBtn.disabled = this.notes.length <= 1;
+    addBatchGemsBtn.disabled = false;
     visualizerSeekSlider.disabled = false;
     visualizerSeekSlider.max = this.duration.toFixed(2);
     visualizerSeekSlider.value = '0';
@@ -2175,7 +2229,7 @@ class BeatmapVisualizer {
   }
 
   updateZoomLabel() {
-    zoomLabel.textContent = `Zoom ${Math.round(this.pixelsPerSecond)} px/s`;
+    zoomLabel.textContent = `${Math.round(this.pixelsPerSecond)} px/s`;
     visualizerZoomSlider.value = String(Math.round(this.pixelsPerSecond));
   }
 
@@ -2192,7 +2246,7 @@ class BeatmapVisualizer {
   }
 
   getEditStepSeconds() {
-    const ms = Number(editStepInput.value || 10);
+    const ms = Number(editStepInput?.value || 10);
     if (Number.isNaN(ms) || ms <= 0) return 0.01;
     return ms / 1000;
   }
@@ -2237,6 +2291,7 @@ class BeatmapVisualizer {
     undoEditBtn.disabled = this.undoStack.length === 0;
     applyReductionBtn.disabled = this.notes.length <= 2;
     cleanNotesBtn.disabled = this.notes.length <= 1;
+    addBatchGemsBtn.disabled = !this.audioBuffer;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
     this.updateEditStatus();
@@ -2260,6 +2315,7 @@ class BeatmapVisualizer {
     const newNote = {
       time: Math.max(0, Math.min(this.duration, this.getTime())),
       lane: selected ? selected.lane : 3,
+      type: 'note',
       judged: false,
       mesh: null,
     };
@@ -2281,6 +2337,75 @@ class BeatmapVisualizer {
     this.draw();
   }
 
+  addGemAtCurrentTime() {
+    if (!this.audioBuffer) return;
+    this.captureUndo();
+    const selected = this.notes[this.selectedIndex];
+    const lane = selected ? selected.lane : 3;
+    const time = Math.max(0, Math.min(this.duration, this.getTime()));
+    const newGem = {
+      time,
+      lane,
+      type: 'gem',
+      judged: false,
+      mesh: null,
+    };
+    this.notes.push(newGem);
+    this.notes.sort((a, b) => a.time - b.time);
+    const index = this.notes.indexOf(newGem);
+    this.selectedIndex = index;
+    this.selectedIndices = new Set([index]);
+    this.lastSelectedIndex = index;
+    this.resetFlowSession();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Added gem: lane ${lane}, time ${time.toFixed(3)}s.`);
+    this.publishLiveNotes();
+    this.draw();
+  }
+
+  addGemBatchAtCurrentTime() {
+    if (!this.audioBuffer) return;
+    const count = Math.max(1, Math.round(Number(batchGemCountInput.value || 0)));
+    const spacingMs = Math.max(0, Number(batchGemSpacingInput.value || 0));
+    if (!Number.isFinite(count) || count <= 0) return alert('Gem count must be greater than 0.');
+    if (!Number.isFinite(spacingMs) || spacingMs < 0) return alert('Gem spacing must be 0 ms or greater.');
+
+    const selected = this.notes[this.selectedIndex];
+    const lane = selected ? selected.lane : 3;
+    const startTime = Math.max(0, Math.min(this.duration, this.getTime()));
+    const spacingSeconds = spacingMs / 1000;
+    const gems = [];
+    for (let i = 0; i < count; i++) {
+      const time = startTime + i * spacingSeconds;
+      if (time > this.duration) break;
+      gems.push({ time, lane, type: 'gem', judged: false, mesh: null });
+    }
+    if (!gems.length) return alert('No gems fit at the current time.');
+
+    this.captureUndo();
+    this.notes.push(...gems);
+    this.notes.sort((a, b) => a.time - b.time);
+    this.selectedIndices = new Set(gems.map(gem => this.notes.indexOf(gem)).filter(index => index >= 0));
+    this.selectedIndex = this.selectedIndices.values().next().value ?? -1;
+    this.lastSelectedIndex = this.selectedIndex;
+    this.resetFlowSession();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
+    addBatchGemsBtn.disabled = false;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Added ${gems.length} gem(s), ${spacingMs} ms apart.`);
+    this.publishLiveNotes();
+    this.draw();
+  }
+
   deleteSelectedNotes() {
     const indices = [...this.selectedIndices].filter(index => this.notes[index]).sort((a, b) => b - a);
     if (!indices.length) return;
@@ -2291,6 +2416,7 @@ class BeatmapVisualizer {
     acceptChangesBtn.disabled = false;
     applyReductionBtn.disabled = this.notes.length <= 2;
     cleanNotesBtn.disabled = this.notes.length <= 1;
+    addBatchGemsBtn.disabled = !this.audioBuffer;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
     this.updateEditStatus(`Deleted ${indices.length} selected note(s).`);
@@ -2313,6 +2439,7 @@ class BeatmapVisualizer {
       notes: entries.map(entry => ({
         offset: entry.note.time - firstTime,
         lane: Math.max(1, Math.min(5, Math.round(entry.note.lane))),
+        type: entry.note.type || 'note',
       })),
     });
     this.updateEditStatus(`Copied ${entries.length} note(s). You can paste in another BeatSync tab with Ctrl+V.`);
@@ -2331,6 +2458,7 @@ class BeatmapVisualizer {
       .map(note => ({
         time: startTime + note.offset,
         lane: note.lane,
+        type: note.type || 'note',
         judged: false,
         mesh: null,
       }))
@@ -2361,7 +2489,7 @@ class BeatmapVisualizer {
 
   applyFlow(value) {
     this.updateFlowLabel();
-    const entries = this.getSelectedEntries();
+    const entries = this.getSelectedEntries().filter(entry => (entry.note.type || 'note') !== 'gem');
     if (entries.length <= 1) {
       flowSlider.value = '0';
       this.updateFlowLabel();
@@ -2490,7 +2618,8 @@ class BeatmapVisualizer {
     if (this.selectedIndex >= 0 && this.notes[this.selectedIndex]) {
       const note = this.notes[this.selectedIndex];
       const dirtyText = this.dirty ? ' Unsaved changes.' : '';
-      visualizerEditStatus.textContent = `Selected note: lane ${note.lane}, time ${note.time.toFixed(3)}s.${dirtyText}`;
+      const label = note.type === 'gem' ? 'Selected gem' : 'Selected note';
+      visualizerEditStatus.textContent = `${label}: lane ${note.lane}, time ${note.time.toFixed(3)}s.${dirtyText}`;
       return;
     }
     visualizerEditStatus.textContent = this.dirty
@@ -2534,7 +2663,7 @@ class BeatmapVisualizer {
   }
 
   applyReduction() {
-    const entries = this.getSelectedEntries();
+    const entries = this.getSelectedEntries().filter(entry => (entry.note.type || 'note') !== 'gem');
     if (entries.length <= 2) return alert('Select at least 3 notes before applying Reduce.');
     const percent = Number(noteReductionInput.value || 0);
     if (Number.isNaN(percent) || percent <= 0) return alert('Reduction must be greater than 0%.');
@@ -2729,23 +2858,44 @@ class BeatmapVisualizer {
 
     for (let i = 0; i < this.notes.length; i++) {
       const note = this.notes[i];
+      const isGem = note.type === 'gem';
       if (note.time < bottomTime - 1 || note.time > topTime + 1) continue;
       const y = this.lineY - (note.time - this.viewTime) * this.pixelsPerSecond;
       const x = laneLeft + (note.lane - 0.5) * laneWidth;
       const nearLine = Math.abs(note.time - this.viewTime) < 0.08;
       const selected = this.selectedIndices.has(i);
-      ctx.beginPath();
-      ctx.fillStyle = selected ? '#ffd84d' : (nearLine ? '#ffffff' : `hsl(${330 - note.lane * 13}, 88%, 64%)`);
-      ctx.shadowColor = selected ? '#ffd84d' : (nearLine ? '#ffffff' : '#ff4f82');
-      ctx.shadowBlur = selected ? 18 : (nearLine ? 18 : 8);
-      ctx.roundRect(x - laneWidth * 0.28, y - 4, laneWidth * 0.56, 8, 4);
-      ctx.fill();
-      if (selected) {
-        ctx.strokeStyle = '#fff5b0';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+      if (isGem) {
+        const size = 5;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.fillStyle = selected ? '#aaddff' : (nearLine ? '#88ddff' : '#3399ff');
+        ctx.shadowColor = selected ? '#aaddff' : '#3399ff';
+        ctx.shadowBlur = selected ? 18 : (nearLine ? 18 : 9);
+        ctx.rect(-size, -size, size * 2, size * 2);
+        ctx.fill();
+        if (selected) {
+          ctx.strokeStyle = '#cceeff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.fillStyle = selected ? '#ffd84d' : (nearLine ? '#ffffff' : `hsl(${330 - note.lane * 13}, 88%, 64%)`);
+        ctx.shadowColor = selected ? '#ffd84d' : (nearLine ? '#ffffff' : '#ff4f82');
+        ctx.shadowBlur = selected ? 18 : (nearLine ? 18 : 8);
+        ctx.roundRect(x - laneWidth * 0.28, y - 4, laneWidth * 0.56, 8, 4);
+        ctx.fill();
+        if (selected) {
+          ctx.strokeStyle = '#fff5b0';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
       }
-      ctx.shadowBlur = 0;
     }
 
     ctx.strokeStyle = '#ffffff';
@@ -2806,8 +2956,12 @@ class RhythmHopGame {
 
     this.tileGroup = new THREE.Group();
     this.railGroup = new THREE.Group();
+    this.gemGroup = new THREE.Group();
+    this.particleGroup = new THREE.Group();
     this.scene.add(this.tileGroup);
     this.scene.add(this.railGroup);
+    this.scene.add(this.gemGroup);
+    this.scene.add(this.particleGroup);
     this.createWorld();
     this.resetStats();
     this.bindInput();
@@ -2927,17 +3081,34 @@ class RhythmHopGame {
 
   buildTiles() {
     this.tileGroup.clear();
-    const mat = new THREE.MeshStandardMaterial({ color: 0xff4f82, emissive: 0x501234, emissiveIntensity: .55, metalness: .15, roughness: .32 });
-    const geo = new THREE.CylinderGeometry(1.75, 1.75, 0.24, 48);
+    this.gemGroup.clear();
+    while (this.particleGroup.children.length) {
+      const particle = this.particleGroup.children.pop();
+      particle.geometry.dispose();
+      particle.material.dispose();
+    }
+    const noteMat = new THREE.MeshStandardMaterial({ color: 0xff4f82, emissive: 0x501234, emissiveIntensity: .55, metalness: .15, roughness: .32 });
+    const noteGeo = new THREE.CylinderGeometry(1.75, 1.75, 0.24, 48);
+    const gemMat = new THREE.MeshStandardMaterial({ color: 0x3399ff, emissive: 0x1166cc, emissiveIntensity: 1.0, metalness: .4, roughness: .15, transparent: true, opacity: .92 });
+    const gemGeo = new THREE.OctahedronGeometry(0.55, 0);
     for (const note of this.notes) {
-      const tile = new THREE.Mesh(geo, mat.clone());
-      tile.position.set(this.lanes[note.lane], 0, note.time * this.speed);
-      tile.material.color.setHSL(0.92 - note.lane * .045, .85, .58);
-      tile.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
-      tile.userData.flash = 0;
-      tile.userData.baseEmissiveIntensity = 0.55;
-      note.mesh = tile;
-      this.tileGroup.add(tile);
+      if (note.type === 'gem') {
+        const gem = new THREE.Mesh(gemGeo, gemMat.clone());
+        gem.position.set(this.lanes[note.lane], this.ballGroundY, note.time * this.speed);
+        gem.userData.collected = false;
+        gem.userData.flash = 0;
+        note.mesh = gem;
+        this.gemGroup.add(gem);
+      } else {
+        const tile = new THREE.Mesh(noteGeo, noteMat.clone());
+        tile.position.set(this.lanes[note.lane], 0, note.time * this.speed);
+        tile.material.color.setHSL(0.92 - note.lane * .045, .85, .58);
+        tile.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+        tile.userData.flash = 0;
+        tile.userData.baseEmissiveIntensity = 0.55;
+        note.mesh = tile;
+        this.tileGroup.add(tile);
+      }
     }
     notesStat.textContent = this.notes.length;
   }
@@ -3082,6 +3253,62 @@ class RhythmHopGame {
     oscB.stop(now + 0.2);
   }
 
+  playBlipSound() {
+    const ctx = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    this.audioContext = ctx;
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.06);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }
+
+  createGemParticles(position) {
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const particle = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0x49c7ff, transparent: true, opacity: 0.95 })
+      );
+      particle.position.copy(position);
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.2 + Math.random() * 2.4;
+      particle.userData.velocity = new THREE.Vector3(
+        Math.cos(angle) * speed,
+        1.4 + Math.random() * 2.4,
+        Math.sin(angle) * speed
+      );
+      particle.userData.life = 0.42 + Math.random() * 0.18;
+      particle.userData.maxLife = particle.userData.life;
+      this.particleGroup.add(particle);
+    }
+  }
+
+  updateGemParticles(dt) {
+    for (let i = this.particleGroup.children.length - 1; i >= 0; i--) {
+      const particle = this.particleGroup.children[i];
+      particle.userData.life -= dt;
+      particle.userData.velocity.y -= dt * 5.2;
+      particle.position.addScaledVector(particle.userData.velocity, dt);
+      const alpha = Math.max(0, particle.userData.life / particle.userData.maxLife);
+      particle.material.opacity = alpha;
+      particle.scale.setScalar(0.55 + alpha * 0.8);
+      if (particle.userData.life <= 0) {
+        this.particleGroup.remove(particle);
+        particle.geometry.dispose();
+        particle.material.dispose();
+      }
+    }
+  }
+
   getAudioTime() {
     if (!this.audioContext || !this.isPlaying) return this.currentTime || 0;
     if (this.isPaused) return this.currentTime || 0;
@@ -3114,11 +3341,19 @@ class RhythmHopGame {
       const past = note.time < pastCutoff;
       note.judged = past;
       if (note.mesh) {
-        note.mesh.visible = !past;
-        note.mesh.scale.set(1, 1, 1);
-        note.mesh.userData.flash = 0;
-        note.mesh.material.emissiveIntensity = note.mesh.userData.baseEmissiveIntensity || 0.55;
-        note.mesh.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+        if (note.type === 'gem') {
+          note.mesh.userData.collected = past;
+          note.mesh.visible = !past;
+          note.mesh.userData.flash = 0;
+          note.mesh.scale.setScalar(1);
+          note.mesh.material.emissiveIntensity = 1.0;
+        } else {
+          note.mesh.visible = !past;
+          note.mesh.scale.set(1, 1, 1);
+          note.mesh.userData.flash = 0;
+          note.mesh.material.emissiveIntensity = note.mesh.userData.baseEmissiveIntensity || 0.55;
+          note.mesh.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+        }
       }
     });
   }
@@ -3185,6 +3420,7 @@ class RhythmHopGame {
 
   updateJudgement(t) {
     for (const note of this.notes) {
+      if (note.type === 'gem') continue;
       if (note.judged) continue;
       if (t < note.time) break;
       note.judged = true;
@@ -3218,10 +3454,43 @@ class RhythmHopGame {
     }
   }
 
-  getJumpY(t) {
-    if (!this.notes.length || !this.isPlaying) return this.ballGroundY + 0.18;
+  updateGemCollection(t) {
+    for (const note of this.notes) {
+      if (note.type !== 'gem') continue;
+      if (!note.mesh) continue;
+      if (note.mesh.userData.collected) continue;
+      if (note.judged) continue;
 
-    const firstNoteTime = this.notes[0].time;
+      if (t < note.time - 0.12) break;
+      if (t > note.time + 0.18) {
+        note.judged = true;
+        note.mesh.visible = false;
+        continue;
+      }
+
+      const gemX = this.lanes[note.lane];
+      const hit = Math.abs(this.ballX - gemX) <= this.tileHitRadius;
+      if (hit) {
+        note.judged = true;
+        note.mesh.userData.collected = true;
+        note.mesh.userData.flash = 1;
+        note.mesh.material.emissive.set(0xaaddff);
+        note.mesh.material.emissiveIntensity = 3.0;
+        note.mesh.scale.set(1.2, 1.3, 1.2);
+        this.createGemParticles(note.mesh.position.clone());
+        note.mesh.visible = false;
+        this.score += 100;
+        scoreStat.textContent = this.score;
+        this.playBlipSound();
+      }
+    }
+  }
+
+  getJumpY(t) {
+    const platformNotes = this.notes.filter(note => note.type !== 'gem');
+    if (!platformNotes.length || !this.isPlaying) return this.ballGroundY + 0.18;
+
+    const firstNoteTime = platformNotes[0].time;
     if (t < firstNoteTime) {
       const windowSeconds = this.preRollSeconds + Math.max(0, firstNoteTime);
       const phase = THREE.MathUtils.clamp((t + this.preRollSeconds) / windowSeconds, 0, 1);
@@ -3229,14 +3498,14 @@ class RhythmHopGame {
     }
 
     let prevTime = 0;
-    let nextTime = this.notes[0].time;
+    let nextTime = platformNotes[0].time;
 
-    if (t >= this.notes[this.notes.length - 1].time) return this.ballGroundY;
+    if (t >= platformNotes[platformNotes.length - 1].time) return this.ballGroundY;
 
-    for (let i = 0; i < this.notes.length - 1; i++) {
-      if (t >= this.notes[i].time && t <= this.notes[i + 1].time) {
-        prevTime = this.notes[i].time;
-        nextTime = this.notes[i + 1].time;
+    for (let i = 0; i < platformNotes.length - 1; i++) {
+      if (t >= platformNotes[i].time && t <= platformNotes[i + 1].time) {
+        prevTime = platformNotes[i].time;
+        nextTime = platformNotes[i + 1].time;
         break;
       }
     }
@@ -3301,7 +3570,8 @@ class RhythmHopGame {
 
     for (const note of this.notes) {
       const tile = note.mesh;
-      if (!tile || tile.userData.flash <= 0) continue;
+      if (!tile || note.type === 'gem') continue;
+      if (tile.userData.flash <= 0) continue;
       tile.userData.flash = Math.max(0, tile.userData.flash - dt * 2.6);
       const flash = tile.userData.flash;
       tile.material.emissiveIntensity = 0.55 + flash * 3.65;
@@ -3313,12 +3583,34 @@ class RhythmHopGame {
       }
     }
 
+    for (const note of this.notes) {
+      if (note.type !== 'gem' || !note.mesh || note.mesh.userData.collected) continue;
+      const gem = note.mesh;
+      const gemJumpY = this.getJumpY(note.time);
+      gem.position.y = gemJumpY;
+      gem.position.z = note.time * this.speed;
+      const gemDist = Math.abs(z - note.time * this.speed);
+      gem.visible = gemDist < 60;
+      if (note.mesh.userData.flash > 0) {
+        note.mesh.userData.flash = Math.max(0, note.mesh.userData.flash - dt * 4);
+        const fs = note.mesh.userData.flash;
+        gem.material.emissiveIntensity = 0.55 + fs * 2.5;
+        gem.scale.setScalar(1 + fs * 0.25);
+        if (fs === 0) {
+          gem.material.emissiveIntensity = 1.0;
+          gem.scale.setScalar(1);
+        }
+      }
+    }
+
     this.camera.position.set(this.ballX * 0.22, 6.2, z - 11.5);
     this.camera.lookAt(this.ballX * 0.18, 0.3, z + 10);
+    this.updateGemParticles(dt);
 
     if (this.isPlaying && !this.isPaused) {
       this.updateLyricsHud(this.getLyricsTime(t), t);
       this.updateJudgement(t);
+      this.updateGemCollection(t);
       if (this.audioBuffer && t > this.audioBuffer.duration + 0.5) {
         this.stop(true);
         this.updateLyricsHud(-1);
@@ -3394,6 +3686,7 @@ visualizerZoomSlider.addEventListener('input', () => visualizer.setZoomValue(vis
 flowSlider.addEventListener('input', () => visualizer.applyFlow(flowSlider.value));
 applyReductionBtn.addEventListener('click', () => visualizer.applyReduction());
 cleanNotesBtn.addEventListener('click', () => visualizer.cleanCloseNotes());
+addBatchGemsBtn.addEventListener('click', () => visualizer.addGemBatchAtCurrentTime());
 visualizerSeekSlider.addEventListener('input', () => {
   if (visualizer.syncingSlider) return;
   visualizer.seekTo(Number(visualizerSeekSlider.value || 0), visualizer.isPlaying);
@@ -3545,6 +3838,12 @@ document.addEventListener('keydown', e => {
   if (e.code === 'KeyX') {
     e.preventDefault();
     visualizer.deleteSelectedNotes();
+    return;
+  }
+
+  if (e.code === 'KeyA') {
+    e.preventDefault();
+    visualizer.addGemAtCurrentTime();
     return;
   }
 });
