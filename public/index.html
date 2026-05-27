@@ -378,21 +378,36 @@ button {
   z-index: 4;
 }
 .damage-flash.active { opacity: 1; transition: opacity .03s linear; }
-.heart-hud {
+.game-hud-row {
   position: absolute;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.heart-hud,
+.game-time-hud {
   padding: 7px 13px;
   border-radius: 999px;
   background: rgba(5, 10, 24, .68);
   border: 1px solid rgba(255,255,255,.14);
   box-shadow: 0 12px 34px rgba(0,0,0,.28);
+  line-height: 1;
+}
+.heart-hud {
   font-size: 22px;
   letter-spacing: 4px;
-  line-height: 1;
-  user-select: none;
+}
+.game-time-hud {
+  color: #dbe4ff;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  white-space: nowrap;
 }
 .heart-hud .lost { opacity: .22; filter: grayscale(1); }
 .heart-text { color: #ff4f74; text-shadow: 0 0 12px rgba(255,80,116,.55); }
@@ -500,9 +515,10 @@ button {
 }
 .note-reduction-control {
   display: grid;
-  grid-template-columns: minmax(68px, 1fr) minmax(70px, 1fr);
+  grid-template-columns: minmax(68px, 1fr) minmax(70px, .8fr) minmax(68px, 1fr) minmax(70px, .8fr);
   gap: 6px;
   align-items: end;
+  grid-column: span 2;
 }
 .note-reduction-control label {
   display: grid;
@@ -544,7 +560,9 @@ button {
   gap: 12px;
   grid-column: 1 / -1;
 }
-.visualizer-time {
+.visualizer-time,
+.visualizer-total-time,
+.visualizer-selected-count {
   min-width: 190px;
   white-space: nowrap;
   padding: 12px 14px;
@@ -555,6 +573,22 @@ button {
   font-weight: 800;
   text-align: center;
 }
+.visualizer-total-time { min-width: 95px; }
+.visualizer-time {
+  flex: 0 0 95px;
+  box-sizing: border-box;
+  min-width: 95px;
+  max-width: 95px;
+  width: 95px;
+  appearance: textfield;
+  font: inherit;
+  outline: none;
+}
+.visualizer-time:focus {
+  border-color: rgba(100,232,255,0.55);
+  box-shadow: 0 0 0 3px rgba(100,232,255,0.12);
+}
+.visualizer-selected-count { min-width: 145px; }
 .visualizer-time-row .game-btn {
   margin: 0 0 0 auto;
   width: auto;
@@ -825,7 +859,10 @@ button {
 
       <div class="game-canvas-wrap" id="gameWrap">
         <canvas id="gameCanvas"></canvas>
-        <div class="heart-hud" id="heartHud"></div>
+        <div class="game-hud-row">
+          <div class="heart-hud" id="heartHud"></div>
+          <div class="game-time-hud" id="gameTimeStat">00:00 / 00:00</div>
+        </div>
         <div class="lyrics-hud" id="lyricsHud"></div>
         <div class="damage-flash" id="damageFlash"></div>
         <div class="game-overlay" id="gameOverlay">
@@ -858,7 +895,7 @@ button {
         </div>
         <div class="zoom-controls">
           <label>Flow
-            <input id="flowSlider" type="range" min="0" max="100" step="1" value="0">
+            <input id="flowSlider" type="range" min="0" max="100" step="10" value="0">
           </label>
           <span id="flowLabel">Flow 0%</span>
         </div>
@@ -867,9 +904,15 @@ button {
             <input type="text" id="noteReductionInput" value="10" inputmode="numeric">
           </label>
           <button id="applyReductionBtn" type="button" disabled>Apply</button>
+          <label>Clean ms
+            <input type="text" id="cleanThresholdInput" value="10" inputmode="numeric">
+          </label>
+          <button id="cleanNotesBtn" type="button" disabled>Clean</button>
         </div>
         <div class="visualizer-time-row">
-          <div class="visualizer-time" id="visualizerTime">00:00 / 00:00</div>
+          <input class="visualizer-time" id="visualizerTime" type="text" value="0" inputmode="numeric" title="Current time in milliseconds">
+          <div class="visualizer-total-time" id="visualizerTotalTime">/ 00:00</div>
+          <div class="visualizer-selected-count" id="visualizerSelectedCount">Selected: 0</div>
           <button class="game-btn secondary" id="downloadCurrentMapBtn" disabled>Download current beatmap</button>
         </div>
       </div>
@@ -881,7 +924,7 @@ button {
         <div class="visualizer-resize-zone" id="visualizerResizeZone" title="Drag vertically to resize visualizer height"></div>
         <div class="visualizer-empty" id="visualizerEmpty">Load a generated or local song to inspect the full beatmap. Drag vertically to move through time, click to seek, and press Space to play/pause.</div>
       </div>
-      <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes affect the game and downloaded ZIP only after Save.</p>
+      <p class="game-note">White line = current note time. Click a note to edit it, or click empty space to seek. Changes update the game live; press Save before downloading the ZIP.</p>
     </div>
 
     <div class="local-loader">
@@ -967,6 +1010,63 @@ const state = {
   generatedMapFiles: {},
   originalMaps: {},
 };
+const NOTE_CLIPBOARD_TYPE = 'beatsync-notes';
+const NOTE_CLIPBOARD_STORAGE_KEY = 'beatsync.noteClipboard.v1';
+let noteClipboard = null;
+
+function normalizeNoteClipboard(value) {
+  let data = value;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch (e) { return null; }
+  }
+  if (!data || data.type !== NOTE_CLIPBOARD_TYPE || !Array.isArray(data.notes)) return null;
+
+  const notes = data.notes
+    .map(note => ({
+      offset: Number(note.offset),
+      lane: Math.max(1, Math.min(5, Math.round(Number(note.lane)))),
+    }))
+    .filter(note => Number.isFinite(note.offset) && Number.isFinite(note.lane));
+  if (!notes.length) return null;
+  return {
+    type: NOTE_CLIPBOARD_TYPE,
+    version: 1,
+    copiedAt: Number(data.copiedAt) || 0,
+    notes,
+  };
+}
+
+function saveNoteClipboard(payload) {
+  noteClipboard = payload;
+  const text = JSON.stringify(payload);
+  try { localStorage.setItem(NOTE_CLIPBOARD_STORAGE_KEY, text); } catch (e) {}
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+}
+
+async function loadNoteClipboard() {
+  const candidates = [];
+  const memory = normalizeNoteClipboard(noteClipboard);
+  if (memory) candidates.push(memory);
+
+  try {
+    const stored = normalizeNoteClipboard(localStorage.getItem(NOTE_CLIPBOARD_STORAGE_KEY));
+    if (stored) candidates.push(stored);
+  } catch (e) {}
+
+  if (navigator.clipboard?.readText) {
+    try {
+      const systemClipboard = normalizeNoteClipboard(await navigator.clipboard.readText());
+      if (systemClipboard) candidates.push(systemClipboard);
+    } catch (e) {}
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.copiedAt - a.copiedAt);
+  noteClipboard = candidates[0];
+  return noteClipboard;
+}
 
 const $ = (sel) => document.querySelector(sel);
 const generatorTabButtons = document.querySelectorAll('.generator-tab-btn');
@@ -1022,6 +1122,7 @@ const livesStat = $('#livesStat');
 const scoreStat = $('#scoreStat');
 const comboStat = $('#comboStat');
 const notesStat = $('#notesStat');
+const gameTimeStat = $('#gameTimeStat');
 const localAudioInput = $('#localAudioInput');
 const localJsInput = $('#localJsInput');
 const localAudioName = $('#localAudioName');
@@ -1052,8 +1153,12 @@ const flowSlider = $('#flowSlider');
 const flowLabel = $('#flowLabel');
 const noteReductionInput = $('#noteReductionInput');
 const applyReductionBtn = $('#applyReductionBtn');
+const cleanThresholdInput = $('#cleanThresholdInput');
+const cleanNotesBtn = $('#cleanNotesBtn');
 const visualizerSeekSlider = $('#visualizerSeekSlider');
 const visualizerTime = $('#visualizerTime');
+const visualizerTotalTime = $('#visualizerTotalTime');
+const visualizerSelectedCount = $('#visualizerSelectedCount');
 const visualizerNoteTotal = $('#visualizerNoteTotal');
 const visualizerEmpty = $('#visualizerEmpty');
 const visualizerEditStatus = $('#visualizerEditStatus');
@@ -1073,12 +1178,19 @@ generatorTabButtons.forEach(button => {
 
 tabButtons.forEach(button => {
   button.addEventListener('click', () => {
+    const previousTab = activeTab;
     activeTab = button.dataset.tab;
     tabButtons.forEach(btn => btn.classList.toggle('active', btn === button));
     rhythmView.classList.toggle('active', activeTab === 'rhythm');
     visualizerView.classList.toggle('active', activeTab === 'visualizer');
-    if (activeTab === 'rhythm') game.resize();
-    if (activeTab === 'visualizer') visualizer.resize();
+    if (activeTab === 'rhythm') {
+      syncGameFromVisualizer(previousTab).catch(err => console.error('Game sync error:', err));
+      game.resize();
+    }
+    if (activeTab === 'visualizer') {
+      syncVisualizerFromGame(previousTab);
+      visualizer.resize();
+    }
   });
 });
 
@@ -1538,6 +1650,11 @@ function cloneNotes(notes) {
   return notes.map(note => ({ time: note.time, lane: note.lane, judged: false, mesh: null }));
 }
 
+function blurActiveControl() {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) active.blur();
+}
+
 function parseTxtBeatmap(text) {
   const notes = [];
   const lines = text.split(/\r?\n/);
@@ -1877,9 +1994,11 @@ class BeatmapVisualizer {
     this.selectedIndex = -1;
     this.selectedIndices = new Set();
     this.lastSelectedIndex = -1;
+    this.resetFlowSession();
     this.dirty = false;
     this.undoStack = [];
     this.redoStack = [];
+    this.flowSession = null;
     this.syncingSlider = false;
 
     this.bindInput();
@@ -1890,6 +2009,7 @@ class BeatmapVisualizer {
 
   bindInput() {
     this.canvas.addEventListener('pointerdown', e => {
+      blurActiveControl();
       if (!this.notes.length) return;
       this.dragging = true;
       this.dragStartY = e.clientY;
@@ -1930,6 +2050,13 @@ class BeatmapVisualizer {
       }
       e.preventDefault();
     });
+
+    this.canvas.addEventListener('wheel', e => {
+      blurActiveControl();
+      if (!this.notes.length) return;
+      e.preventDefault();
+      this.setZoom(e.deltaY < 0 ? 1.08 : 0.92);
+    }, { passive: false });
   }
 
   async load(audioBlob, notes, name) {
@@ -1944,6 +2071,7 @@ class BeatmapVisualizer {
     this.dirty = false;
     this.undoStack = [];
     this.redoStack = [];
+    this.flowSession = null;
     this.duration = Math.max(this.audioBuffer.duration, this.notes.length ? this.notes[this.notes.length - 1].time : 0);
     this.viewTime = 0;
     this.startOffset = 0;
@@ -1956,6 +2084,7 @@ class BeatmapVisualizer {
     resetAllBtn.disabled = false;
     downloadCurrentMapBtn.disabled = this.notes.length === 0;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     visualizerSeekSlider.disabled = false;
     visualizerSeekSlider.max = this.duration.toFixed(2);
     visualizerSeekSlider.value = '0';
@@ -1964,6 +2093,7 @@ class BeatmapVisualizer {
     this.updateFlowLabel();
     visualizerEmpty.style.display = 'none';
     visualizerTime.dataset.name = this.mapName;
+    visualizerTotalTime.textContent = `/ ${this.formatTime(this.duration)}`;
     this.updateEditStatus();
     this.updateZoomLabel();
     this.updateNoteTotal();
@@ -1972,6 +2102,11 @@ class BeatmapVisualizer {
 
   updateNoteTotal() {
     visualizerNoteTotal.textContent = `Total notes: ${this.notes.length}`;
+  }
+
+  updateSelectedCount() {
+    const count = [...this.selectedIndices].filter(index => this.notes[index]).length;
+    visualizerSelectedCount.textContent = `Selected: ${count}`;
   }
 
   getLayout() {
@@ -2012,6 +2147,7 @@ class BeatmapVisualizer {
       this.lastSelectedIndex = index;
     }
     this.selectedIndex = index;
+    this.resetFlowSession();
     this.updateEditStatus();
     this.draw();
   }
@@ -2047,6 +2183,14 @@ class BeatmapVisualizer {
     flowLabel.textContent = `Flow ${Math.round(Number(flowSlider.value || 0))}%`;
   }
 
+  resetFlowSession(resetSlider = true) {
+    this.flowSession = null;
+    if (resetSlider) {
+      flowSlider.value = '0';
+      this.updateFlowLabel();
+    }
+  }
+
   getEditStepSeconds() {
     const ms = Number(editStepInput.value || 10);
     if (Number.isNaN(ms) || ms <= 0) return 0.01;
@@ -2055,15 +2199,34 @@ class BeatmapVisualizer {
 
   captureUndo() {
     this.undoStack.push(cloneNotes(this.notes));
-    if (this.undoStack.length > 10) this.undoStack.shift();
+    if (this.undoStack.length > 50) this.undoStack.shift();
     this.redoStack = [];
     undoEditBtn.disabled = false;
+  }
+
+  getSelectedEntries() {
+    return [...this.selectedIndices]
+      .filter(index => this.notes[index])
+      .map(index => ({ index, note: this.notes[index] }))
+      .sort((a, b) => a.note.time - b.note.time);
+  }
+
+  getSelectionKey(entries = this.getSelectedEntries()) {
+    return entries.map(entry => entry.index).join(',');
   }
 
   clearSelection() {
     this.selectedIndex = -1;
     this.selectedIndices = new Set();
     this.lastSelectedIndex = -1;
+    this.resetFlowSession();
+  }
+
+  deselectNotes() {
+    if (!this.hasSelection()) return;
+    this.clearSelection();
+    this.updateEditStatus();
+    this.draw();
   }
 
   restoreNotes(notes, markDirty = true) {
@@ -2073,10 +2236,21 @@ class BeatmapVisualizer {
     acceptChangesBtn.disabled = !this.dirty;
     undoEditBtn.disabled = this.undoStack.length === 0;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
     this.updateEditStatus();
+    this.publishLiveNotes();
     this.draw();
+  }
+
+  publishLiveNotes() {
+    if (!this.mapName || !state.generatedMaps[this.mapName]) return;
+    const liveNotes = cloneNotes(this.notes);
+    state.generatedMaps[this.mapName] = liveNotes;
+    if (difficultySelect.value === this.mapName && typeof game !== 'undefined') {
+      game.updateNotes(liveNotes);
+    }
   }
 
   addNoteAtCurrentTime() {
@@ -2095,12 +2269,15 @@ class BeatmapVisualizer {
     this.selectedIndex = index;
     this.selectedIndices = new Set([index]);
     this.lastSelectedIndex = index;
+    this.resetFlowSession();
     this.dirty = true;
     acceptChangesBtn.disabled = false;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
     this.updateEditStatus(`Added note: lane ${newNote.lane}, time ${newNote.time.toFixed(3)}s.`);
+    this.publishLiveNotes();
     this.draw();
   }
 
@@ -2113,26 +2290,118 @@ class BeatmapVisualizer {
     this.dirty = true;
     acceptChangesBtn.disabled = false;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
     this.updateEditStatus(`Deleted ${indices.length} selected note(s).`);
+    this.publishLiveNotes();
+    this.draw();
+  }
+
+  copySelectedNotes() {
+    const entries = this.getSelectedEntries();
+    if (!entries.length) {
+      this.updateEditStatus('Select notes before copying.');
+      return;
+    }
+
+    const firstTime = entries[0].note.time;
+    saveNoteClipboard({
+      type: NOTE_CLIPBOARD_TYPE,
+      version: 1,
+      copiedAt: Date.now(),
+      notes: entries.map(entry => ({
+        offset: entry.note.time - firstTime,
+        lane: Math.max(1, Math.min(5, Math.round(entry.note.lane))),
+      })),
+    });
+    this.updateEditStatus(`Copied ${entries.length} note(s). You can paste in another BeatSync tab with Ctrl+V.`);
+  }
+
+  async pasteCopiedNotes() {
+    if (!this.audioBuffer) return;
+    const clipboard = await loadNoteClipboard();
+    if (!clipboard?.notes?.length) {
+      this.updateEditStatus('No copied notes in memory.');
+      return;
+    }
+
+    const startTime = this.getTime();
+    const pasted = clipboard.notes
+      .map(note => ({
+        time: startTime + note.offset,
+        lane: note.lane,
+        judged: false,
+        mesh: null,
+      }))
+      .filter(note => note.time >= 0 && note.time <= this.duration);
+
+    if (!pasted.length) {
+      this.updateEditStatus('Copied notes do not fit at the current time in this song.');
+      return;
+    }
+
+    this.captureUndo();
+    this.notes.push(...pasted);
+    this.notes.sort((a, b) => a.time - b.time);
+    this.selectedIndices = new Set(pasted.map(note => this.notes.indexOf(note)).filter(index => index >= 0));
+    this.selectedIndex = this.selectedIndices.values().next().value ?? -1;
+    this.lastSelectedIndex = this.selectedIndex;
+    this.resetFlowSession();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Pasted ${pasted.length} note(s) at ${this.formatTime(startTime)}.`);
+    this.publishLiveNotes();
     this.draw();
   }
 
   applyFlow(value) {
     this.updateFlowLabel();
-    const original = state.originalMaps[this.mapName];
-    if (!original) return;
+    const entries = this.getSelectedEntries();
+    if (entries.length <= 1) {
+      flowSlider.value = '0';
+      this.updateFlowLabel();
+      this.updateEditStatus('Select at least 2 notes before applying Flow.');
+      return;
+    }
     const flow = Math.max(0, Math.min(100, Number(value || 0)));
+    const selectionKey = this.getSelectionKey(entries);
+    if (!this.flowSession || this.flowSession.selectionKey !== selectionKey) {
+      this.flowSession = {
+        selectionKey,
+        baseEntries: entries.map(entry => ({ index: entry.index, note: { ...entry.note } })),
+        dirtyAtStart: this.dirty,
+        undoCaptured: false,
+      };
+    }
+
+    if (!this.flowSession.undoCaptured && flow > 0) {
+      this.captureUndo();
+      this.flowSession.undoCaptured = true;
+    }
+
     const { redobleMs, zigzagMs } = getCurrentTimingRuleValues();
-    this.notes = applyFlowDistribution(original, flow, redobleMs, zigzagMs);
-    this.clearSelection();
-    this.dirty = flow > 0;
+    const baseEntries = this.flowSession.baseEntries;
+    const flowed = applyFlowDistribution(baseEntries.map(entry => entry.note), flow, redobleMs, zigzagMs);
+    baseEntries.forEach((entry, i) => {
+      const next = flow <= 0 ? entry.note : { ...entry.note, lane: flowed[i].lane };
+      this.notes[entry.index] = { ...next, judged: false, mesh: null };
+    });
+
+    this.dirty = flow > 0 || this.flowSession.dirtyAtStart;
     acceptChangesBtn.disabled = !this.dirty;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
-    this.updateEditStatus(flow > 0 ? `Flow applied at ${flow}%. Press Save to use it in the game and ZIP.` : 'Flow reset to the originally generated beatmap.');
+    this.updateEditStatus(flow > 0
+      ? `Flow applied at ${flow}% to ${entries.length} selected note(s). Game updated live; press Save before downloading ZIP.`
+      : `Flow restored ${entries.length} selected note(s) to their original lanes.`);
+    this.publishLiveNotes();
     this.draw();
   }
 
@@ -2147,7 +2416,9 @@ class BeatmapVisualizer {
     }
     this.dirty = true;
     acceptChangesBtn.disabled = false;
+    this.resetFlowSession();
     this.updateEditStatus();
+    this.publishLiveNotes();
     this.draw();
   }
 
@@ -2155,7 +2426,7 @@ class BeatmapVisualizer {
     const previous = this.undoStack.pop();
     if (!previous) return;
     this.redoStack.push(cloneNotes(this.notes));
-    if (this.redoStack.length > 10) this.redoStack.shift();
+    if (this.redoStack.length > 50) this.redoStack.shift();
     this.restoreNotes(previous, true);
   }
 
@@ -2163,7 +2434,7 @@ class BeatmapVisualizer {
     const next = this.redoStack.pop();
     if (!next) return;
     this.undoStack.push(cloneNotes(this.notes));
-    if (this.undoStack.length > 10) this.undoStack.shift();
+    if (this.undoStack.length > 50) this.undoStack.shift();
     this.restoreNotes(next, true);
   }
 
@@ -2173,11 +2444,7 @@ class BeatmapVisualizer {
     this.undoStack = [];
     this.redoStack = [];
     this.restoreNotes(original, false);
-    state.generatedMaps[this.mapName] = cloneNotes(original);
     notesStat.textContent = original.length;
-    if (difficultySelect.value === this.mapName && getPlaybackAudioBlob()) {
-      game.load(getPlaybackAudioBlob(), state.generatedMaps[this.mapName]).catch(err => console.error('Game load error:', err));
-    }
     this.updateEditStatus('All changes reset to the originally generated beatmap.');
   }
 
@@ -2197,16 +2464,16 @@ class BeatmapVisualizer {
     acceptChangesBtn.disabled = true;
     undoEditBtn.disabled = true;
     applyReductionBtn.disabled = accepted.length <= 2;
+    cleanNotesBtn.disabled = accepted.length <= 1;
     notesStat.textContent = accepted.length;
     this.updateNoteTotal();
-    if (difficultySelect.value === this.mapName && getPlaybackAudioBlob()) {
-      game.load(getPlaybackAudioBlob(), accepted).catch(err => console.error('Game load error:', err));
-    }
-    this.updateEditStatus('Changes saved. The game and Download ZIP now use this edited beatmap.');
+    this.publishLiveNotes();
+    this.updateEditStatus('Changes saved. Download ZIP now uses this edited beatmap.');
     this.draw();
   }
 
   updateEditStatus(message) {
+    this.updateSelectedCount();
     if (message) {
       visualizerEditStatus.textContent = message;
       return;
@@ -2227,7 +2494,7 @@ class BeatmapVisualizer {
       return;
     }
     visualizerEditStatus.textContent = this.dirty
-      ? 'Unsaved edits. Press Save to use them in the game and ZIP.'
+      ? 'Unsaved edits update the game live. Press Save before downloading ZIP.'
       : 'Click a note to select it. Shift-click another note to select a range. Use left/right to change lane and up/down to move time.';
   }
 
@@ -2267,56 +2534,93 @@ class BeatmapVisualizer {
   }
 
   applyReduction() {
-    if (this.notes.length <= 2) return;
+    const entries = this.getSelectedEntries();
+    if (entries.length <= 2) return alert('Select at least 3 notes before applying Reduce.');
     const percent = Number(noteReductionInput.value || 0);
     if (Number.isNaN(percent) || percent <= 0) return alert('Reduction must be greater than 0%.');
 
-    const removeCount = Math.min(this.notes.length - 2, Math.round(this.notes.length * Math.min(percent, 100) / 100));
-    if (removeCount <= 0) return alert('Reduction is too small for this beatmap.');
+    const removeCount = Math.min(entries.length - 2, Math.round(entries.length * Math.min(percent, 100) / 100));
+    if (removeCount <= 0) return alert('Reduction is too small for the selected notes.');
 
     this.captureUndo();
-    const removeIndices = this.getHomogeneousRemovalIndices(removeCount);
+    const removeIndices = this.getHomogeneousRemovalIndices(removeCount, entries);
     this.notes = this.notes.filter((_, index) => !removeIndices.has(index));
     this.clearSelection();
     this.dirty = true;
     acceptChangesBtn.disabled = false;
     applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
     notesStat.textContent = this.notes.length;
     this.updateNoteTotal();
-    this.updateEditStatus(`Reduced ${removeIndices.size} notes (${percent}%). First and last notes were preserved.`);
+    this.updateEditStatus(`Reduced ${removeIndices.size} selected note(s) (${percent}%). First and last selected notes were preserved.`);
+    this.publishLiveNotes();
     this.draw();
   }
 
-  getHomogeneousRemovalIndices(removeCount) {
-    const firstInterior = 1;
-    const lastInterior = this.notes.length - 2;
+  cleanCloseNotes() {
+    if (this.notes.length <= 1) return;
+    const thresholdMs = Number(cleanThresholdInput.value || 10);
+    if (Number.isNaN(thresholdMs) || thresholdMs <= 0) return alert('Clean threshold must be greater than 0 ms.');
+
+    const thresholdSeconds = thresholdMs / 1000;
+    const sorted = cloneNotes(this.notes).sort((a, b) => a.time - b.time);
+    const cleaned = [];
+    let removed = 0;
+
+    for (const note of sorted) {
+      const previousKept = cleaned[cleaned.length - 1];
+      if (previousKept && note.time - previousKept.time <= thresholdSeconds) {
+        removed++;
+        continue;
+      }
+      cleaned.push(note);
+    }
+
+    if (!removed) return alert(`No notes found within ${thresholdMs} ms.`);
+
+    this.captureUndo();
+    this.notes = cleaned;
+    this.clearSelection();
+    this.dirty = true;
+    acceptChangesBtn.disabled = false;
+    applyReductionBtn.disabled = this.notes.length <= 2;
+    cleanNotesBtn.disabled = this.notes.length <= 1;
+    notesStat.textContent = this.notes.length;
+    this.updateNoteTotal();
+    this.updateEditStatus(`Clean removed ${removed} close note(s) within ${thresholdMs} ms.`);
+    this.publishLiveNotes();
+    this.draw();
+  }
+
+  getHomogeneousRemovalIndices(removeCount, entries) {
     const result = new Set();
-    const firstTime = this.notes[0].time;
-    const lastTime = this.notes[this.notes.length - 1].time;
+    const firstTime = entries[0].note.time;
+    const lastTime = entries[entries.length - 1].note.time;
 
     if (removeCount === 1) {
       const target = (firstTime + lastTime) / 2;
-      result.add(this.findClosestInteriorNote(target, result));
+      result.add(this.findClosestInteriorNote(target, result, entries));
       return result;
     }
 
     for (let i = 0; i < removeCount; i++) {
       const target = firstTime + (i + 1) * (lastTime - firstTime) / (removeCount + 1);
-      result.add(this.findClosestInteriorNote(target, result));
+      result.add(this.findClosestInteriorNote(target, result, entries));
     }
 
     return result;
   }
 
-  findClosestInteriorNote(targetTime, excluded) {
-    let bestIndex = 1;
+  findClosestInteriorNote(targetTime, excluded, entries) {
+    let bestIndex = entries[1].index;
     let bestDistance = Infinity;
-    for (let i = 1; i < this.notes.length - 1; i++) {
-      if (excluded.has(i)) continue;
-      const distance = Math.abs(this.notes[i].time - targetTime);
+    for (let i = 1; i < entries.length - 1; i++) {
+      const entry = entries[i];
+      if (excluded.has(entry.index)) continue;
+      const distance = Math.abs(entry.note.time - targetTime);
       if (distance < bestDistance) {
         bestDistance = distance;
-        bestIndex = i;
+        bestIndex = entry.index;
       }
     }
     return bestIndex;
@@ -2454,7 +2758,10 @@ class BeatmapVisualizer {
     ctx.fillStyle = 'rgba(255,255,255,.92)';
     ctx.font = '12px system-ui, sans-serif';
     ctx.fillText('NOW', laneRight - 34, this.lineY - 9);
-    visualizerTime.textContent = `${this.formatTime(currentTime)} / ${this.formatTime(this.duration)}`;
+    if (document.activeElement !== visualizerTime) {
+      visualizerTime.value = String(Math.round(currentTime * 1000));
+    }
+    visualizerTotalTime.textContent = `/ ${this.formatTime(this.duration)}`;
   }
 
   loop() {
@@ -2477,6 +2784,8 @@ class RhythmHopGame {
     this.audioBuffer = null;
     this.source = null;
     this.audioStartTime = 0;
+    this.currentTime = 0;
+    this.duration = 0;
     this.isPlaying = false;
     this.isPaused = false;
     this.preRollSeconds = 2;
@@ -2579,11 +2888,41 @@ class RhythmHopGame {
     this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
     this.audioBuffer = await this.audioContext.decodeAudioData((await audioBlob.arrayBuffer()).slice(0));
     this.notes = notes.map(note => ({ ...note, judged: false, mesh: null }));
+    this.duration = Math.max(this.audioBuffer.duration, this.notes.length ? this.notes[this.notes.length - 1].time : 0);
+    this.currentTime = 0;
     this.resetStats();
     this.buildTiles();
+    this.updateTimeHud(0);
     overlay.innerHTML = `<div class="game-message"><h3>Ready</h3><p>${this.notes.length} tiles loaded. Drag left/right and land on each glowing platform.</p><button class="overlay-btn" id="overlayStartBtn">Start</button></div>`;
     const btn = document.getElementById('overlayStartBtn');
     if (btn) btn.addEventListener('click', () => gameStartBtn.click());
+  }
+
+  updateNotes(notes) {
+    const time = this.getClampedAudioTime();
+    const wasRunning = this.isPlaying && !this.isPaused;
+    const wasPaused = this.isPlaying && this.isPaused;
+    if (wasRunning || wasPaused) this.stopSource();
+
+    this.notes = notes.map(note => ({ ...note, judged: false, mesh: null }));
+    this.duration = Math.max(this.audioBuffer?.duration || 0, this.notes.length ? this.notes[this.notes.length - 1].time : 0);
+    this.buildTiles();
+    this.currentTime = Math.min(time, this.duration || time);
+    this.syncNotesToTime(this.currentTime);
+    this.updateTimeHud(this.currentTime);
+
+    if (wasRunning) {
+      this.audioContext.resume().then(() => {
+        this.startSourceAt(this.currentTime, false);
+        this.isPlaying = true;
+        this.isPaused = false;
+        gamePauseBtn.textContent = 'Pause';
+      }).catch(err => console.error('Game resume error:', err));
+    } else {
+      this.isPlaying = wasPaused;
+      this.isPaused = wasPaused;
+      gamePauseBtn.textContent = wasPaused ? 'Resume' : 'Pause';
+    }
   }
 
   buildTiles() {
@@ -2603,29 +2942,19 @@ class RhythmHopGame {
     notesStat.textContent = this.notes.length;
   }
 
-  async play() {
+  async play(startTime = 0) {
     if (!this.audioBuffer) return;
+    const offset = this.clampTime(startTime);
     this.stop(false);
     await this.audioContext.resume();
     this.resetStats();
-    this.invulnerableUntil = -Infinity;
+    this.currentTime = offset;
+    this.invulnerableUntil = offset > 0 ? offset + this.invulnerabilitySeconds : -Infinity;
     this.ball.visible = true;
     this.ball.material.opacity = this.ballBaseOpacity;
     this.ball.material.transparent = false;
-    this.notes.forEach(note => {
-      note.judged = false;
-      if (note.mesh) {
-        note.mesh.visible = true;
-        note.mesh.scale.set(1, 1, 1);
-        note.mesh.userData.flash = 0;
-        note.mesh.material.emissiveIntensity = note.mesh.userData.baseEmissiveIntensity || 0.55;
-      }
-    });
-    this.source = this.audioContext.createBufferSource();
-    this.source.buffer = this.audioBuffer;
-    this.source.connect(this.audioContext.destination);
-    this.audioStartTime = this.audioContext.currentTime + this.preRollSeconds;
-    this.source.start(this.audioStartTime);
+    this.syncNotesToTime(offset);
+    this.startSourceAt(offset, offset <= 0);
     this.isPlaying = true;
     this.isPaused = false;
     gamePauseBtn.textContent = 'Pause';
@@ -2635,12 +2964,30 @@ class RhythmHopGame {
     overlay.innerHTML = '<div class="game-message"><h3>READY?</h3><p>Get in position.</p></div>';
   }
 
+  startSourceAt(offset, withPreRoll = false) {
+    if (!this.audioBuffer) return;
+    this.stopSource();
+    const maxOffset = Math.max(0, this.audioBuffer.duration - 0.01);
+    const safeOffset = Math.max(0, Math.min(maxOffset, offset));
+    const delay = withPreRoll ? this.preRollSeconds : 0;
+    const when = this.audioContext.currentTime + delay;
+    this.source = this.audioContext.createBufferSource();
+    this.source.buffer = this.audioBuffer;
+    this.source.connect(this.audioContext.destination);
+    this.audioStartTime = when - safeOffset;
+    this.source.start(when, safeOffset);
+  }
+
+  stopSource() {
+    if (!this.source) return;
+    try { this.source.stop(); } catch (e) {}
+    this.source.disconnect();
+    this.source = null;
+  }
+
   stop(showOverlay = true) {
-    if (this.source) {
-      try { this.source.stop(); } catch (e) {}
-      this.source.disconnect();
-      this.source = null;
-    }
+    this.stopSource();
+    this.currentTime = 0;
     this.isPlaying = false;
     this.isPaused = false;
     gamePauseBtn.disabled = true;
@@ -2652,20 +2999,26 @@ class RhythmHopGame {
       this.ball.material.transparent = false;
     }
     if (showOverlay) overlay.style.display = 'flex';
+    this.updateTimeHud(0);
   }
 
   pause() {
     if (!this.isPlaying || this.isPaused) return;
-    this.audioContext.suspend();
+    this.currentTime = this.getClampedAudioTime();
+    this.stopSource();
     this.isPaused = true;
     gamePauseBtn.textContent = 'Resume';
+    this.updateTimeHud(this.currentTime);
   }
 
   resume() {
     if (!this.isPaused) return;
-    this.audioContext.resume();
-    this.isPaused = false;
-    gamePauseBtn.textContent = 'Pause';
+    this.audioContext.resume().then(() => {
+      this.startSourceAt(this.currentTime, false);
+      this.invulnerableUntil = Math.max(this.invulnerableUntil, this.currentTime + 0.35);
+      this.isPaused = false;
+      gamePauseBtn.textContent = 'Pause';
+    }).catch(err => console.error('Game resume error:', err));
   }
 
   togglePause() {
@@ -2675,7 +3028,7 @@ class RhythmHopGame {
 
   restart() {
     this.stop(false);
-    this.play();
+    this.play(0);
   }
 
   resetStats() {
@@ -2730,8 +3083,78 @@ class RhythmHopGame {
   }
 
   getAudioTime() {
-    if (!this.audioContext || !this.isPlaying) return 0;
+    if (!this.audioContext || !this.isPlaying) return this.currentTime || 0;
+    if (this.isPaused) return this.currentTime || 0;
     return this.audioContext.currentTime - this.audioStartTime;
+  }
+
+  clampTime(time) {
+    return Math.max(0, Math.min(this.duration || this.audioBuffer?.duration || 0, Number(time) || 0));
+  }
+
+  getClampedAudioTime() {
+    return this.clampTime(this.getAudioTime());
+  }
+
+  formatTime(seconds) {
+    const safe = Math.max(0, Math.floor(seconds || 0));
+    const min = Math.floor(safe / 60).toString().padStart(2, '0');
+    const sec = (safe % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+  }
+
+  updateTimeHud(time = this.getAudioTime()) {
+    const current = this.clampTime(time);
+    gameTimeStat.textContent = `${this.formatTime(current)} / ${this.formatTime(this.duration)}`;
+  }
+
+  syncNotesToTime(time) {
+    const pastCutoff = Math.max(0, time - 0.05);
+    this.notes.forEach(note => {
+      const past = note.time < pastCutoff;
+      note.judged = past;
+      if (note.mesh) {
+        note.mesh.visible = !past;
+        note.mesh.scale.set(1, 1, 1);
+        note.mesh.userData.flash = 0;
+        note.mesh.material.emissiveIntensity = note.mesh.userData.baseEmissiveIntensity || 0.55;
+        note.mesh.material.emissive.setHSL(0.92 - note.lane * .045, .75, .22);
+      }
+    });
+  }
+
+  seekTo(time, autoplay = false) {
+    if (!this.audioBuffer) return;
+    const offset = this.clampTime(time);
+    const shouldResume = autoplay || (this.isPlaying && !this.isPaused);
+    this.stopSource();
+    this.currentTime = offset;
+    this.syncNotesToTime(offset);
+    this.invulnerableUntil = Math.max(this.invulnerableUntil, offset + 0.35);
+    this.updateTimeHud(offset);
+
+    if (shouldResume) {
+      this.audioContext.resume().then(() => {
+        this.startSourceAt(offset, false);
+        this.isPlaying = true;
+        this.isPaused = false;
+        gamePauseBtn.textContent = 'Pause';
+        gamePauseBtn.disabled = false;
+        gameRestartBtn.disabled = false;
+      }).catch(err => console.error('Game seek error:', err));
+      return;
+    }
+
+    if (this.isPlaying) {
+      this.isPaused = true;
+      gamePauseBtn.textContent = 'Resume';
+      gamePauseBtn.disabled = false;
+      gameRestartBtn.disabled = false;
+    }
+  }
+
+  seekRelative(deltaSeconds) {
+    this.seekTo(this.getClampedAudioTime() + deltaSeconds, false);
   }
 
   getLyricsTime(rawGameTime) {
@@ -2843,8 +3266,9 @@ class RhythmHopGame {
     const dt = Math.min(this.clock.getDelta(), 0.033);
     const t = this.getAudioTime();
     const z = t * this.speed;
+    this.updateTimeHud(t);
 
-    if (this.isPlaying) {
+    if (this.isPlaying && !this.isPaused) {
       if (t < -0.5) {
         overlay.style.display = 'flex';
         overlay.innerHTML = '<div class="game-message"><h3>READY?</h3><p>Get in position.</p></div>';
@@ -2892,7 +3316,7 @@ class RhythmHopGame {
     this.camera.position.set(this.ballX * 0.22, 6.2, z - 11.5);
     this.camera.lookAt(this.ballX * 0.18, 0.3, z + 10);
 
-    if (this.isPlaying) {
+    if (this.isPlaying && !this.isPaused) {
       this.updateLyricsHud(this.getLyricsTime(t), t);
       this.updateJudgement(t);
       if (this.audioBuffer && t > this.audioBuffer.duration + 0.5) {
@@ -2909,6 +3333,25 @@ class RhythmHopGame {
 
 const visualizer = new BeatmapVisualizer(visualizerCanvas);
 const game = new RhythmHopGame($('#gameCanvas'));
+
+function syncVisualizerFromGame(previousTab) {
+  if (previousTab !== 'rhythm' || !visualizer.audioBuffer || !game.audioBuffer) return;
+  const time = game.getClampedAudioTime();
+  if (game.isPlaying && !game.isPaused) game.pause();
+  visualizer.seekTo(time, false);
+}
+
+async function syncGameFromVisualizer(previousTab) {
+  if (previousTab !== 'visualizer' || !visualizer.audioBuffer) return;
+  const time = visualizer.getTime();
+  if (visualizer.isPlaying) visualizer.pause();
+
+  const audioBlob = getPlaybackAudioBlob();
+  const notes = state.generatedMaps[difficultySelect.value] || [];
+  if (!audioBlob || !notes.length) return;
+  if (!game.audioBuffer) await game.load(audioBlob, notes);
+  game.seekTo(time, false);
+}
 
 function startVisualizerResize(e) {
   const startY = e.clientY;
@@ -2939,6 +3382,8 @@ function startVisualizerResize(e) {
 }
 
 visualizerResizeZone.addEventListener('pointerdown', startVisualizerResize);
+visualizerSeekSlider.addEventListener('pointerdown', blurActiveControl);
+visualizerResizeZone.addEventListener('pointerdown', blurActiveControl);
 
 visualizerRestartBtn.addEventListener('click', () => visualizer.returnToStart());
 visualizerPlayBtn.addEventListener('click', () => visualizer.togglePlay());
@@ -2948,15 +3393,83 @@ resetAllBtn.addEventListener('click', () => visualizer.resetAll());
 visualizerZoomSlider.addEventListener('input', () => visualizer.setZoomValue(visualizerZoomSlider.value));
 flowSlider.addEventListener('input', () => visualizer.applyFlow(flowSlider.value));
 applyReductionBtn.addEventListener('click', () => visualizer.applyReduction());
+cleanNotesBtn.addEventListener('click', () => visualizer.cleanCloseNotes());
 visualizerSeekSlider.addEventListener('input', () => {
   if (visualizer.syncingSlider) return;
   visualizer.seekTo(Number(visualizerSeekSlider.value || 0), visualizer.isPlaying);
 });
+function commitVisualizerTimeInput() {
+  if (!visualizer.audioBuffer) return;
+  const ms = Number(String(visualizerTime.value || '').trim());
+  if (!Number.isFinite(ms)) {
+    visualizerTime.value = String(Math.round(visualizer.getTime() * 1000));
+    return;
+  }
+  visualizer.seekTo(ms / 1000, visualizer.isPlaying);
+  visualizerTime.value = String(Math.round(visualizer.getTime() * 1000));
+}
+visualizerTime.addEventListener('focus', () => visualizerTime.select());
+visualizerTime.addEventListener('change', commitVisualizerTimeInput);
+visualizerTime.addEventListener('keydown', e => {
+  if (e.code === 'Enter') {
+    e.preventDefault();
+    commitVisualizerTimeInput();
+    visualizerTime.select();
+  }
+});
 
 document.addEventListener('keydown', e => {
   const tag = e.target?.tagName?.toLowerCase();
-  const isTextTarget = tag === 'input' || tag === 'textarea' || tag === 'select';
+  const inputType = e.target?.type?.toLowerCase?.() || '';
+  const isTextEntryTarget = tag === 'textarea' || e.target?.isContentEditable || (tag === 'input' && !['button', 'checkbox', 'radio', 'range', 'reset', 'submit'].includes(inputType));
+  const isTypingTarget = isTextEntryTarget || tag === 'select';
+
+  if (activeTab === 'rhythm') {
+    if (isTypingTarget) return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      game.togglePause();
+      return;
+    }
+
+    if (game.isPaused && e.shiftKey && e.code === 'ArrowLeft') {
+      e.preventDefault();
+      game.seekRelative(-1);
+      return;
+    }
+
+    if (game.isPaused && e.shiftKey && e.code === 'ArrowRight') {
+      e.preventDefault();
+      game.seekRelative(1);
+      return;
+    }
+
+    return;
+  }
+
   if (activeTab !== 'visualizer') return;
+
+  if (e.code === 'Escape') {
+    e.preventDefault();
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    visualizer.deselectNotes();
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && !isTextEntryTarget) {
+    e.preventDefault();
+    visualizer.copySelectedNotes();
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && !isTextEntryTarget) {
+    e.preventDefault();
+    visualizer.pasteCopiedNotes();
+    return;
+  }
+
+  if (isTypingTarget) return;
 
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
     e.preventDefault();
@@ -3023,8 +3536,6 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  if (isTextTarget) return;
-
   if (e.code === 'KeyC') {
     e.preventDefault();
     visualizer.addNoteAtCurrentTime();
@@ -3050,9 +3561,10 @@ async function playCurrentGame() {
   const notes = state.generatedMaps[difficultySelect.value] || [];
   const audioBlob = getPlaybackAudioBlob();
   if (!audioBlob || !notes.length) return alert('This difficulty has no playable notes.');
+  const startTime = game.audioBuffer ? game.getClampedAudioTime() : (visualizer.mapName === difficultySelect.value ? visualizer.getTime() : 0);
   visualizer.pause();
   await game.load(audioBlob, notes);
-  await game.play();
+  await game.play(startTime);
 }
 
 gameStartBtn.addEventListener('click', playCurrentGame);
